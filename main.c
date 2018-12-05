@@ -1,13 +1,12 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on November 17 of 2018, at 13:06 BRT
+// Last edited on December 05 of 2018, at 14:13 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
 #include <chicago/debug.h>
 #include <chicago/display.h>
-#include <chicago/exec.h>
 #include <chicago/file.h>
 #include <chicago/ipc.h>
 #include <chicago/panic.h>
@@ -72,18 +71,4 @@ Void KernelMainLate(Void) {
 	ConWriteFormated("CHicago Operating System for %s\r\n", CHICAGO_ARCH);													// Print some system informations
 	ConWriteFormated("Codename '%s'\r\n", CHICAGO_CODENAME);
 	ConWriteFormated("%s\r\n\r\n", CHICAGO_VSTR);
-	
-	PProcess proc = ExecCreateProcess("\\System\\Programs\\sesmgr.che");													// Let's create the session manager process!
-	
-	if (proc == Null) {
-		DbgWriteFormated("PANIC! Failed to run \\System\\Programs\\sesmgr.che\r\n");
-		Panic(PANIC_KERNEL_INIT_FAILED);
-	}
-	
-	UIntPtr pid = proc->id;																									// Save the pid of the session manager process
-	
-	PsAddProcess(proc);																										// RUN!
-	PsWaitProcess(pid);																										// Session manager is not supposed to exit, so this function should never return
-	DbgWriteFormated("PANIC! The \\System\\Programs\\sesmgr.che program closed\r\n");										// ...
-	Panic(PANIC_KERNEL_UNEXPECTED_ERROR);																					// Panic
 }
