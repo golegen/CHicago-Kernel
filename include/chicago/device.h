@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 22:38 BRT
-// Last edited on October 19 of 2018, at 18:22 BRT
+// Last edited on December 07 of 2018, at 13:16 BRT
 
 #ifndef __CHICAGO_DEVICE_H__
 #define __CHICAGO_DEVICE_H__
@@ -18,6 +18,7 @@ typedef struct DeviceStruct {
 
 Void NullDeviceInit(Void);
 Void ZeroDeviceInit(Void);
+Void ConsoleDeviceInit(Void);
 Void RawMouseDeviceInit(Void);
 Void RawKeyboardDeviceInit(Void);
 Void FrameBufferDeviceInit(Void);
@@ -27,6 +28,10 @@ Void RawMouseDeviceWrite(Int8 offx, Int8 offy, UInt8 buttons);
 
 Void RawKeyboardDeviceRead(UIntPtr len, PUInt8 buf);
 Void RawKeyboardDeviceWrite(UInt8 data);
+
+Void ConsoleDeviceReadKeyboard(UIntPtr len, PChar buf);
+Void ConsoleDeviceWriteKeyboard(Char data);
+Void ConsoleDeviceClearKeyboard(Void);
 
 Boolean FsReadDevice(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf);
 Boolean FsWriteDevice(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf);

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 12 of 2018, at 21:08 BRT
-// Last edited on October 27 of 2018, at 22:25 BRT
+// Last edited on December 07 of 2018, at 13:05 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -34,7 +34,7 @@ Void RawKeyboardDeviceRead(UIntPtr len, PUInt8 buf) {
 		return;
 	}
 	
-	while (RawKeyboardDeviceQueue.length < len) {											// Let's fill the stack with the chars that we need
+	while (RawKeyboardDeviceQueue.length < len) {											// Let's fill the queue with the chars that we need
 		PsSwitchTask(Null);
 	}
 	
@@ -48,7 +48,7 @@ Void RawKeyboardDeviceRead(UIntPtr len, PUInt8 buf) {
 }
 
 Void RawKeyboardDeviceInit(Void) {
-	RawKeyboardDeviceQueue.head = Null;														// Init the keyboard stack
+	RawKeyboardDeviceQueue.head = Null;														// Init the keyboard queue
 	RawKeyboardDeviceQueue.tail = Null;
 	RawKeyboardDeviceQueue.length = 0;
 	RawKeyboardDeviceQueue.free = False;

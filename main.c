@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on December 05 of 2018, at 14:13 BRT
+// Last edited on December 07 of 2018, at 10:53 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -71,4 +71,6 @@ Void KernelMainLate(Void) {
 	ConWriteFormated("CHicago Operating System for %s\r\n", CHICAGO_ARCH);													// Print some system informations
 	ConWriteFormated("Codename '%s'\r\n", CHICAGO_CODENAME);
 	ConWriteFormated("%s\r\n\r\n", CHICAGO_VSTR);
+	
+	ArchHalt();																												// Halt
 }
