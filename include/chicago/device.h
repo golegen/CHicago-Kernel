@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 22:38 BRT
-// Last edited on December 07 of 2018, at 13:16 BRT
+// Last edited on December 08 of 2018, at 10:14 BRT
 
 #ifndef __CHICAGO_DEVICE_H__
 #define __CHICAGO_DEVICE_H__
@@ -28,9 +28,11 @@ Void RawMouseDeviceWrite(Int8 offx, Int8 offy, UInt8 buttons);
 
 Void RawKeyboardDeviceRead(UIntPtr len, PUInt8 buf);
 Void RawKeyboardDeviceWrite(UInt8 data);
+Void RawKeyboardDeviceClear(Void);
 
 Void ConsoleDeviceReadKeyboard(UIntPtr len, PChar buf);
 Void ConsoleDeviceWriteKeyboard(Char data);
+Boolean ConsoleDeviceBackKeyboard(Void);
 Void ConsoleDeviceClearKeyboard(Void);
 
 Boolean FsReadDevice(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf);

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 28 of 2018, at 01:09 BRT
-// Last edited on November 17 of 2018, at 12:53 BRT
+// Last edited on December 08 of 2018, at 10:47 BRT
 
 #define __CHICAGO_ARCH_PROCESS__
 
@@ -65,11 +65,15 @@ Void PsFreeContext(PContext ctx) {
 Void PsSwitchTaskTimer(PRegisters regs) {
 	if ((PsThreadQueue == Null) || (PsThreadQueue->length == 0) || (!PsTaskSwitchEnabled)) {						// We can switch?
 		return;																										// Nope
+	} else if (PsCurrentThread->quantum != 0) {																		// This process still have time to run?
+		PsCurrentThread->quantum--;																					// Yes!
+		return;
 	}
 	
 	PThread old = PsCurrentThread;																					// Save the old thread
 	
 	PsCurrentThread = QueueRemove(PsThreadQueue);																	// Get the next thread
+	old->quantum = PS_DEFAULT_QUANTUM;																				// Set the default quantum to the old thread
 	old->ctx->esp = (UIntPtr)regs;																					// Save the old context
 	
 	QueueAdd(PsThreadQueue, old);																					// Add the old thread to the queue again
@@ -104,7 +108,9 @@ Void PsSwitchTaskForce(PRegisters regs) {
 	PsCurrentThread = QueueRemove(PsThreadQueue);																	// Get the next thread
 	
 	if (old != Null) {																								// Save the old thread info?
-		old->ctx->esp = (UIntPtr)regs;																				// Yes, save the old context
+		PsCurrentThread->quantum += old->quantum;																	// Yes, give the quantum of the old process to the new one!
+		old->quantum = PS_DEFAULT_QUANTUM;																			// And set the default quantum to the old thread
+		old->ctx->esp = (UIntPtr)regs;																				// Save the old context
 		Asm Volatile("fxsave (%0)" :: "r"(PsFPUStateSave));															// And the old fpu state
 		StrCopyMemory(old->ctx->fpu_state, PsFPUStateSave, 512);
 		QueueAdd(PsThreadQueue, old);																				// And add the old process to the queue again

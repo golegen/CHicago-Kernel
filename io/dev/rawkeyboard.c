@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 12 of 2018, at 21:08 BRT
-// Last edited on December 07 of 2018, at 13:05 BRT
+// Last edited on December 07 of 2018, at 17:40 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -42,6 +42,16 @@ Void RawKeyboardDeviceRead(UIntPtr len, PUInt8 buf) {
 	
 	for (UIntPtr i = 0; i < len; i++) {														// Fill the buffer!
 		buf[i] = (UInt8)QueueRemove(&RawKeyboardDeviceQueue);
+	}
+	
+	PsUnlock(&RawKeyboardDeviceQueueLock);													// Unlock!
+}
+
+Void RawKeyboardDeviceClear(Void) {
+	PsLock(&RawKeyboardDeviceQueueLock);													// Lock
+	
+	while (RawKeyboardDeviceQueue.length != 0) {											// Clean!
+		QueueRemove(&RawKeyboardDeviceQueue);
 	}
 	
 	PsUnlock(&RawKeyboardDeviceQueueLock);													// Unlock!

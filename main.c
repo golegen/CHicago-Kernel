@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on December 07 of 2018, at 10:53 BRT
+// Last edited on December 08 of 2018, at 10:28 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -9,8 +9,11 @@
 #include <chicago/display.h>
 #include <chicago/file.h>
 #include <chicago/ipc.h>
+#include <chicago/keyboard.h>
 #include <chicago/panic.h>
 #include <chicago/version.h>
+
+extern Void ShellRun(Void);
 
 Void KernelMain(Void) {
 	ArchInitDebug();																										// Init the architecture-dependent debugging method
@@ -59,9 +62,15 @@ Void KernelMain(Void) {
 }
 
 Void KernelMainLate(Void) {
+	DispIncrementProgessBar();
 	DbgWriteFormated("[Kernel] Tasking initialized\r\n");																	// Tasking initialized
 	
+	KbdInit();																												// Init the keyboard handling thread
+	DispIncrementProgessBar();
+	DbgWriteFormated("[Kernel] Keyboard initialized\r\n");
+	
 	IpcInit();																												// Init the IPC interface
+	DispIncrementProgessBar();
 	DbgWriteFormated("[Kernel] IPC initialized\r\n");
 	
 	DispFillProgressBar();																									// Kernel initialized
@@ -72,5 +81,6 @@ Void KernelMainLate(Void) {
 	ConWriteFormated("Codename '%s'\r\n", CHICAGO_CODENAME);
 	ConWriteFormated("%s\r\n\r\n", CHICAGO_VSTR);
 	
+	ShellRun();																												// Run the shell!
 	ArchHalt();																												// Halt
 }

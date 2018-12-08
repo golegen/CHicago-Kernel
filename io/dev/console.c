@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 07 of 2018, at 10:41 BRT
-// Last edited on December 07 of 2018, at 13:18 BRT
+// Last edited on December 08 of 2018, at 10:16 BRT
 
 #include <chicago/console.h>
 #include <chicago/debug.h>
@@ -18,8 +18,9 @@ Void ConsoleDeviceReadKeyboard(UIntPtr len, PChar buf) {
 	}
 	
 	while (ConsoleDeviceKeyboardQueue.length < len) {																// Let's fill the queue with the chars that we need
-		if (((UInt8)ListGet(&ConsoleDeviceKeyboardQueue, ConsoleDeviceKeyboardQueue.length - 1)) == '\n') {			// End?
-			break;																									// Yes
+		if (((UInt8)ListGet(&ConsoleDeviceKeyboardQueue, 0)) == '\n') {												// End?
+			ListRemove(&ConsoleDeviceKeyboardQueue, 0);																// Yes
+			break;
 		}
 		
 		PsSwitchTask(Null);
@@ -46,6 +47,21 @@ Void ConsoleDeviceWriteKeyboard(Char data) {
 	PsLock(&ConsoleDeviceKeyboardQueueLock);																		// Lock
 	QueueAdd(&ConsoleDeviceKeyboardQueue, (PVoid)data);																// Add to the queue
 	PsUnlock(&ConsoleDeviceKeyboardQueueLock);																		// Unlock!
+}
+
+Boolean ConsoleDeviceBackKeyboard(Void) {
+	Boolean ret = False;
+	
+	PsLock(&ConsoleDeviceKeyboardQueueLock);																		// Lock
+	
+	if (ConsoleDeviceKeyboardQueue.length != 0) {																	// We can do it?
+		ListRemove(&ConsoleDeviceKeyboardQueue, 0);																	// Yes, remove the first entry!
+		ret = True;
+	}
+	
+	PsUnlock(&ConsoleDeviceKeyboardQueueLock);																		// Unlock!
+	
+	return ret;
 }
 
 Void ConsoleDeviceClearKeyboard(Void) {

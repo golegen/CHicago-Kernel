@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on October 27 of 2018, at 22:12 BRT
+// Last edited on December 08 of 2018, at 11:01 BRT
 
 #include <chicago/display.h>
 #include <chicago/process.h>
@@ -12,8 +12,8 @@ Lock ConLock = False;
 UIntPtr ConCursorX = 0;
 UIntPtr ConCursorY = 0;
 Boolean ConRefresh = True;
-UIntPtr ConBackgroundColor = 0xFF000000;
-UIntPtr ConForegroundColor = 0xFFAAAAAA;
+UIntPtr ConBackColor = 0xFF000000;
+UIntPtr ConForeColor = 0xFFAAAAAA;
 
 Void ConSetRefresh(Boolean s) {
 	PsLock(&ConLock);																												// Lock
@@ -43,20 +43,20 @@ IntPtr ConGetScale(Void) {
 
 Void ConSetColor(UIntPtr bg, UIntPtr fg) {
 	PsLock(&ConLock);																												// Lock
-	ConBackgroundColor = bg;																										// Set the background of the console
-	ConForegroundColor = fg;																										// Set the foreground of the console
+	ConBackColor = bg;																												// Set the background of the console
+	ConForeColor = fg;																												// Set the foreground of the console
 	PsUnlock(&ConLock);																												// Unlock
 }
 
 Void ConSetBackground(UIntPtr c) {
 	PsLock(&ConLock);																												// Lock
-	ConBackgroundColor = c;																											// Set the background of the console
+	ConBackColor = c;																												// Set the background of the console
 	PsUnlock(&ConLock);																												// Unlock
 }
 
 Void ConSetForeground(UIntPtr c) {
 	PsLock(&ConLock);																												// Lock
-	ConForegroundColor = c;																											// Set the foreground of the console
+	ConForeColor = c;																												// Set the foreground of the console
 	PsUnlock(&ConLock);																												// Unlock
 }
 
@@ -64,11 +64,11 @@ Void ConGetColor(PUIntPtr bg, PUIntPtr fg) {
 	PsLock(&ConLock);																												// Lock
 	
 	if (bg != Null) {																												// We should save the bg?
-		*bg = ConBackgroundColor;																									// Yes
+		*bg = ConBackColor;																											// Yes
 	}
 	
 	if (fg != Null) {																												// And the fg?
-		*fg = ConForegroundColor;																									// Yes
+		*fg = ConForeColor;																											// Yes
 	}
 	
 	PsUnlock(&ConLock);																												// Unlock
@@ -76,14 +76,14 @@ Void ConGetColor(PUIntPtr bg, PUIntPtr fg) {
 
 UIntPtr ConGetBackground(Void) {
 	PsLock(&ConLock);																												// Lock
-	IntPtr bg = ConBackgroundColor;																									// Save the bg
+	IntPtr bg = ConBackColor;																										// Save the bg
 	PsUnlock(&ConLock);																												// Unlock
 	return bg;																														// Return it
 }
 
 UIntPtr ConGetForeground(Void) {
 	PsLock(&ConLock);																												// Lock
-	IntPtr fg = ConForegroundColor;																									// Save the fg
+	IntPtr fg = ConForeColor;																										// Save the fg
 	PsUnlock(&ConLock);																												// Unlock
 	return fg;																														// Return it
 }
@@ -137,7 +137,7 @@ UIntPtr ConGetCursorY(Void) {
 
 Void ConClearScreen(Void) {
 	PsLock(&ConLock);																												// Lock
-	DispClearScreen(ConBackgroundColor);																							// Clear the screen
+	DispClearScreen(ConBackColor);																									// Clear the screen
 	ConCursorX = ConCursorY = 0;																									// Move the cursor to 0, 0
 	
 	if (ConRefresh) {
@@ -151,11 +151,13 @@ static Void ConWriteCharacterInt(Char data) {
 	switch (data) {
 	case '\b': {																													// Backspace
 		if (ConCursorX > 0) {																										// We have any more characters to delete in this line?
-			ConCursorX++;																											// Yes
+			ConCursorX--;																											// Yes
 		} else if (ConCursorY > 0) {																								// We have any more lines?																										
 			ConCursorY--;																											// Yes
 			ConCursorX = DispGetWidth() / (ConScale * 8) - 1;
 		}
+		
+		DispFillRectangle(ConCursorX * (ConScale * 8), ConCursorY * (ConScale * 16), ConScale * 8, ConScale * 16, ConBackColor);
 		
 		break;
 	}
@@ -175,7 +177,7 @@ static Void ConWriteCharacterInt(Char data) {
 		for (IntPtr i = 0; i < ConScale * 16; i++) {
 			for (IntPtr j = ConScale * 8; j >= 0; j--) {
 				if (DispFont[(UInt8)data][i * 8 / (ConScale * 8)] & (1 << (j * 16 / (ConScale * 16)))) {							// Put pixel if we need
-					DispPutPixel((ConCursorX * (ConScale * 8)) + j, (ConCursorY * (ConScale * 16)) + i, ConForegroundColor);
+					DispPutPixel((ConCursorX * (ConScale * 8)) + j, (ConCursorY * (ConScale * 16)) + i, ConForeColor);
 				}
 			}
 		}
@@ -192,7 +194,7 @@ static Void ConWriteCharacterInt(Char data) {
 	}
 	
 	if (ConCursorY >= DispGetHeight() / (ConScale * 16)) {																			// Scroll up?
-		DispScrollScreen(ConScale, ConBackgroundColor);																				// Yes
+		DispScrollScreen(ConScale, ConBackColor);																					// Yes
 		ConCursorY = DispGetHeight() / (ConScale * 16) - 1;
 	}
 }
@@ -266,6 +268,9 @@ Void ConWriteFormated(PChar data, ...) {
 	VariadicList va;
 	VariadicStart(va, data);																										// Let's start our va list with the arguments provided by the user (if any)
 	
+	UIntPtr oldbg = ConBackColor;																									// Save the bg and the fg
+	UIntPtr oldfg = ConForeColor;
+	
 	for (UIntPtr i = 0; i < StrGetLength(data); i++) {
 		if (data[i] != '%') {																										// It's an % (integer, string, character or other)?
 			ConWriteCharacterInt(data[i]);																							// No
@@ -285,6 +290,19 @@ Void ConWriteFormated(PChar data, ...) {
 			}
 			case 'x': {																												// Hexadecimal Number
 				ConWriteIntegerInt((UIntPtr)VariadicArg(va, UIntPtr), 16);
+				break;
+			}
+			case 'b': {																												// Change the background color
+				ConBackColor = (UIntPtr)VariadicArg(va, UIntPtr);
+				break;
+			}
+			case 'f': {																												// Change the foreground color
+				ConForeColor = (UIntPtr)VariadicArg(va, UIntPtr);
+				break;
+			}
+			case 'r': {																												// Reset the bg and the fg
+				ConBackColor = oldbg;
+				ConForeColor = oldfg;
 				break;
 			}
 			default: {																												// Probably it's another % (probably)

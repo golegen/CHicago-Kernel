@@ -1,7 +1,7 @@
 # File author is Ítalo Lima Marconato Matias
 #
 # Created on May 11 of 2018, at 13:14 BRT
-# Last edited on December 07 of 2018, at 10:49 BRT
+# Last edited on December 08 of 2018, at 10:32 BRT
 
 ARCH ?= x86
 VERBOSE ?= false
@@ -37,14 +37,14 @@ OBJECTS := main.c.o
 OBJECTS += ds/list.c.o ds/queue.c.o ds/stack.c.o
 OBJECTS += exec/chexec.c.o exec/exec.c.o exec/lib.c.o
 OBJECTS += io/console.c.o io/device.c.o io/debug.c.o io/display.c.o
-OBJECTS += io/file.c.o
+OBJECTS += io/file.c.o io/keyboard.c.o
 OBJECTS += io/dev/console.c.o io/dev/framebuffer.c.o io/dev/rawkeyboard.c.o io/dev/rawmouse.c.o
 OBJECTS += io/dev/null.c.o io/dev/zero.c.o
 OBJECTS += io/fs/chfs.c.o io/fs/devfs.c.o io/fs/iso9660.c.o
 OBJECTS += mm/alloc.c.o mm/heap.c.o mm/pmm.c.o mm/ualloc.c.o
 OBJECTS += mm/virt.c.o
 OBJECTS += sys/ipc.c.o sys/panic.c.o sys/process.c.o sys/rand.c.o
-OBJECTS += sys/sc.c.o sys/string.c.o
+OBJECTS += sys/sc.c.o sys/shell.c.o sys/string.c.o
 
 OTHER_OBJECTS := splash.bmp
 

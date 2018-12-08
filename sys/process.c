@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:59 BRT
-// Last edited on November 17 of 2018, at 14:01 BRT
+// Last edited on December 08 of 2018, at 10:49 BRT
 
 #define __CHICAGO_PROCESS__
 
@@ -43,6 +43,7 @@ PThread PsCreateThreadInt(UIntPtr entry, UIntPtr userstack, Boolean user) {
 	
 	th->id = 0;																																	// We're going to set the id and the parent process later
 	th->parent = Null;
+	th->quantum = PS_DEFAULT_QUANTUM;																											// Set the default quantum
 	
 	return th;
 }

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:42 BRT
-// Last edited on November 17 of 2018, at 12:55 BRT
+// Last edited on December 08 of 2018, at 11:22 BRT
 
 #ifndef __CHICAGO_PROCESS_H__
 #define __CHICAGO_PROCESS_H__
@@ -15,6 +15,7 @@
 #define PsUnlockTaskSwitch(i) if (i ## e) PsTaskSwitchEnabled = True;
 #define PsCurrentProcess (PsCurrentThread->parent)
 #define PsDontRequeue ((PVoid)1)
+#define PS_DEFAULT_QUANTUM 20
 
 typedef Boolean Lock, *PLock;
 
@@ -36,6 +37,7 @@ typedef struct {
 typedef struct {
 	UIntPtr id;
 	PContext ctx;
+	UIntPtr quantum;
 	PProcess parent;
 } Thread, *PThread;
 
