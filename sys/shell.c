@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 09 of 2018, at 10:08 BRT
+// Last edited on December 09 of 2018, at 11:07 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -80,6 +80,7 @@ static Void ShellMain(Void) {
 							 "ps    - List all the processes",
 							 "ver   - Print the system version");
 		} else if (StrGetLength(argv[0]) == 5 && StrCompare(argv[0], "panic")) {																		// Crash the system
+			PsCurrentProcess->id = PsCurrentThread->id = 0;																								// *HACK*
 			DbgWriteFormated("PANIC! User requested panic :)\r\n");
 			Panic(PANIC_KERNEL_UNEXPECTED_ERROR);
 		} else if (StrGetLength(argv[0]) == 2 && StrCompare(argv[0], "ps")) {																			// List all the processes

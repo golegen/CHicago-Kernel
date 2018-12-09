@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on December 09 of 2018, at 09:11 BRT
+// Last edited on December 09 of 2018, at 11:03 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -9,7 +9,6 @@
 #include <chicago/display.h>
 #include <chicago/file.h>
 #include <chicago/ipc.h>
-#include <chicago/keyboard.h>
 #include <chicago/panic.h>
 #include <chicago/shell.h>
 #include <chicago/version.h>
@@ -64,14 +63,11 @@ Void KernelMainLate(Void) {
 	DispIncrementProgessBar();
 	DbgWriteFormated("[Kernel] Tasking initialized\r\n");																	// Tasking initialized
 	
-	KbdInit();																												// Init the keyboard handling thread
-	DispIncrementProgessBar();
-	DbgWriteFormated("[Kernel] Keyboard initialized\r\n");
-	
 	IpcInit();																												// Init the IPC interface
 	DispIncrementProgessBar();
 	DbgWriteFormated("[Kernel] IPC initialized\r\n");
 	
+	ArchFinishKeyboard();																									// Now we can start handling the keyboard!
 	DispFillProgressBar();																									// Kernel initialized
 	DbgWriteFormated("[Kernel] Kernel initialized\r\n\r\n");
 	
