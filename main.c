@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on December 08 of 2018, at 10:28 BRT
+// Last edited on December 09 of 2018, at 09:11 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -11,9 +11,8 @@
 #include <chicago/ipc.h>
 #include <chicago/keyboard.h>
 #include <chicago/panic.h>
+#include <chicago/shell.h>
 #include <chicago/version.h>
-
-extern Void ShellRun(Void);
 
 Void KernelMain(Void) {
 	ArchInitDebug();																										// Init the architecture-dependent debugging method
