@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 09 of 2018, at 17:23 BRT
+// Last edited on December 09 of 2018, at 20:41 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -10,6 +10,7 @@
 #include <chicago/device.h>
 #include <chicago/display.h>
 #include <chicago/heap.h>
+#include <chicago/nls.h>
 #include <chicago/panic.h>
 #include <chicago/process.h>
 #include <chicago/string.h>
@@ -72,13 +73,16 @@ static Void ShellMain(Void) {
 			DispRefresh();																																// Refresh the screen
 			ConSetRefresh(True);																														// Enable screen refresh
 		} else if (StrGetLength(argv[0]) == 4 && StrCompare(argv[0], L"help")) {																		// Print the avaliable commands
-			ConWriteFormated(L"%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n\r\n",
-							 L"cls   - Clear the screen",
-							 L"echo  - Print the arguments to the screen",
-							 L"help  - Print the avaliable commands",
-							 L"panic - Crash the system",
-							 L"ps    - List all the processes",
-							 L"ver   - Print the system version");
+			ConWriteFormated(NlsGetMessage(NLS_SHELL_HELP));
+		} else if (StrGetLength(argv[0]) == 4 && StrCompare(argv[0], L"lang")) {																		// Change the system language
+			if (argc == 1) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_LANG_LIST), NlsGetLanguages());																// Just list the languages
+			} else if (NlsGetLanguage(argv[1]) == (UIntPtr)-1) {																						// Valid language?
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_LANG_INVALID), argv[1]);																		// Nope...
+			} else {
+				NlsSetLanguage(NlsGetLanguage(argv[1]));																								// Ok, set!
+				ConWriteFormated(L"\r\n");
+			}
 		} else if (StrGetLength(argv[0]) == 5 && StrCompare(argv[0], L"panic")) {																		// Crash the system
 			PsCurrentProcess->id = PsCurrentThread->id = 0;																								// *HACK*
 			DbgWriteFormated("PANIC! User requested panic :)\r\n");
@@ -88,18 +92,23 @@ static Void ShellMain(Void) {
 			
 			ListForeach(PsProcessList, i) {																												// Print all the processes
 				PProcess proc = (PProcess)i->data;
-				PWChar name = proc->name == Null ? L"<unamed>" : proc->name;
+				PWChar name = proc->name == Null ? NlsGetMessage(NLS_SHELL_PS_UNAMED) : proc->name;
 				UIntPtr usage = proc->mem_usage + (proc->id == 0 ? HeapGetCurrent() - HeapGetStart() : 0);
 				
-				ConWriteFormated(L"Name: %s | ID: %d | Usage: %d %s\r\n%s", name, proc->id, BVal(usage), BStr(usage), i->next == Null ? L"\r\n" : L"");
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_PS), name, proc->id, BVal(usage), BStr(usage), i->next == Null ? L"\r\n" : L"");
 			}
 			
 			DispRefresh();																																// Refresh the screen
 			ConSetRefresh(True);																														// Enable screen refresh
 		} else if (StrGetLength(argv[0]) == 3 && StrCompare(argv[0], L"ver")) {																			// Print the system version
-			ConWriteFormated(L"CHicago Operating System for %s\r\nCodename '%s'\r\n%s\r\n\r\n", CHICAGO_ARCH, CHICAGO_CODENAME, CHICAGO_VSTR);
+			ConSetRefresh(False);																														// Disable screen refresh
+			ConWriteFormated(NlsGetMessage(NLS_OS_NAME), CHICAGO_ARCH);																					// Print some system informations
+			ConWriteFormated(NlsGetMessage(NLS_OS_CODENAME), CHICAGO_CODENAME);
+			ConWriteFormated(NlsGetMessage(NLS_OS_VSTR), CHICAGO_MAJOR, CHICAGO_MINOR, CHICAGO_BUILD);
+			DispRefresh();																																// Refresh the screen
+			ConSetRefresh(True);																														// Enable screen refresh
 		} else {
-			ConWriteFormated(L"Invalid command '%s'\r\n\r\n", argv[0]);																					// Invalid command!
+			ConWriteFormated(NlsGetMessage(NLS_SHELL_INVALID), argv[0]);																				// Invalid command!
 		}
 	}
 	

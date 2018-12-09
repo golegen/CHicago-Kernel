@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on December 09 of 2018, at 18:32 BRT
+// Last edited on December 09 of 2018, at 20:11 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -9,6 +9,7 @@
 #include <chicago/display.h>
 #include <chicago/file.h>
 #include <chicago/ipc.h>
+#include <chicago/nls.h>
 #include <chicago/panic.h>
 #include <chicago/shell.h>
 #include <chicago/version.h>
@@ -72,9 +73,9 @@ Void KernelMainLate(Void) {
 	DbgWriteFormated("[Kernel] Kernel initialized\r\n\r\n");
 	
 	ConClearScreen();																										// Clear the screen
-	ConWriteFormated(L"CHicago Operating System for %s\r\n", CHICAGO_ARCH);												// Print some system informations
-	ConWriteFormated(L"Codename '%s'\r\n", CHICAGO_CODENAME);
-	ConWriteFormated(L"%s\r\n\r\n", CHICAGO_VSTR);
+	ConWriteFormated(NlsGetMessage(NLS_OS_NAME), CHICAGO_ARCH);																// Print some system informations
+	ConWriteFormated(NlsGetMessage(NLS_OS_CODENAME), CHICAGO_CODENAME);
+	ConWriteFormated(NlsGetMessage(NLS_OS_VSTR), CHICAGO_MAJOR, CHICAGO_MINOR, CHICAGO_BUILD);
 	
 	ShellRun();																												// Run the shell!a
 	ArchHalt();																												// Halt
