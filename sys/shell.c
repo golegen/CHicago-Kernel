@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 09 of 2018, at 11:07 BRT
+// Last edited on December 09 of 2018, at 17:23 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -27,21 +27,21 @@ static UIntPtr BVal(UIntPtr bytes) {
 	}
 }
 
-static PChar BStr(UIntPtr bytes) {
+static PWChar BStr(UIntPtr bytes) {
 	if (bytes < 1024) {																																	// Less than 1KB?
-		return "B";
+		return L"B";
 	} else if (bytes < 1024 * 1024) {																													// Less than 1MB?
-		return "KB";
+		return L"KB";
 	} else if (bytes < 1024 * 1024 * 1024) {																											// Less than 1GB?
-		return "MB";
+		return L"MB";
 	} else {
-		return "GB";																																	// 1GB+
+		return L"GB";																																	// 1GB+
 	}
 }
 
 static Void ShellMain(Void) {
-	PChar cmd = (PChar)MemAllocate(1024);																												// Alloc memory for reading the keyboard
-	PChar *argv = (PChar*)MemAllocate(sizeof(PChar) * 256);																								// Alloc memory for transforming the cmd into argc/argv
+	PWChar cmd = (PWChar)MemAllocate(1024);																												// Alloc memory for reading the keyboard
+	PWChar *argv = (PWChar*)MemAllocate(sizeof(PWChar) * 256);																							// Alloc memory for transforming the cmd into argc/argv
 	
 	if ((cmd == Null) || (argv == Null)) {
 		DbgWriteFormated("PANIC! Couldn't init the shell\r\n");																							// Failed... PANIC!
@@ -49,57 +49,57 @@ static Void ShellMain(Void) {
 	}
 	
 	while (True) {
-		ConWriteFormated("%fchicago%f@%f%s%r $ ", 0xFFAA5500, 0xFF55FF55, 0xFF5555FF, CHICAGO_CODENAME);												// Print the prompt
+		ConWriteFormated(L"%fchicago%f@%f%s%r $ ", 0xFFAA5500, 0xFF55FF55, 0xFF5555FF, CHICAGO_CODENAME);												// Print the prompt
 		ConsoleDeviceReadKeyboard(1023, cmd);																											// Read from the keyboard
 		
-		PChar tok = StrTokenize(cmd, " ");																												// Let's tokenize!
+		PWChar tok = StrTokenize(cmd, L" ");																											// Let's tokenize!
 		UIntPtr argc = 0;
 		
 		while (tok != Null) {
 			argv[argc++] = tok;																															// Add this arg
-			tok = StrTokenize(Null, " ");																												// Go to the next one!
+			tok = StrTokenize(Null, L" ");																												// Go to the next one!
 		}
 		
-		if (StrGetLength(argv[0]) == 3 && StrCompare(argv[0], "cls")) {																					// Clear the screen
+		if (StrGetLength(argv[0]) == 3 && StrCompare(argv[0], L"cls")) {																				// Clear the screen
 			ConClearScreen();
-		} else if (StrGetLength(argv[0]) == 4 && StrCompare(argv[0], "echo")) {																			// Print the arguments to the screen
+		} else if (StrGetLength(argv[0]) == 4 && StrCompare(argv[0], L"echo")) {																		// Print the arguments to the screen
 			ConSetRefresh(False);																														// Disable screen refresh
 			
 			for (UIntPtr i = 1; i < argc; i++) {																										// Print
-				ConWriteFormated("%s%s%s", i != 1 ? " " : "", argv[i], (i + 1) >= argc ? "\r\n\r\n" : "");
+				ConWriteFormated(L"%s%s%s", i != 1 ? L" " : L"", argv[i], (i + 1) >= argc ? L"\r\n\r\n" : L"");
 			}
 			
 			DispRefresh();																																// Refresh the screen
 			ConSetRefresh(True);																														// Enable screen refresh
-		} else if (StrGetLength(argv[0]) == 4 && StrCompare(argv[0], "help")) {																			// Print the avaliable commands
-			ConWriteFormated("%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n\r\n",
-							 "cls   - Clear the screen",
-							 "echo  - Print the arguments to the screen",
-							 "help  - Print the avaliable commands",
-							 "panic - Crash the system",
-							 "ps    - List all the processes",
-							 "ver   - Print the system version");
-		} else if (StrGetLength(argv[0]) == 5 && StrCompare(argv[0], "panic")) {																		// Crash the system
+		} else if (StrGetLength(argv[0]) == 4 && StrCompare(argv[0], L"help")) {																		// Print the avaliable commands
+			ConWriteFormated(L"%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n%s\r\n\r\n",
+							 L"cls   - Clear the screen",
+							 L"echo  - Print the arguments to the screen",
+							 L"help  - Print the avaliable commands",
+							 L"panic - Crash the system",
+							 L"ps    - List all the processes",
+							 L"ver   - Print the system version");
+		} else if (StrGetLength(argv[0]) == 5 && StrCompare(argv[0], L"panic")) {																		// Crash the system
 			PsCurrentProcess->id = PsCurrentThread->id = 0;																								// *HACK*
 			DbgWriteFormated("PANIC! User requested panic :)\r\n");
 			Panic(PANIC_KERNEL_UNEXPECTED_ERROR);
-		} else if (StrGetLength(argv[0]) == 2 && StrCompare(argv[0], "ps")) {																			// List all the processes
+		} else if (StrGetLength(argv[0]) == 2 && StrCompare(argv[0], L"ps")) {																			// List all the processes
 			ConSetRefresh(False);																														// Disable screen refresh
 			
 			ListForeach(PsProcessList, i) {																												// Print all the processes
 				PProcess proc = (PProcess)i->data;
-				PChar name = proc->name == Null ? "<unamed>" : proc->name;
+				PWChar name = proc->name == Null ? L"<unamed>" : proc->name;
 				UIntPtr usage = proc->mem_usage + (proc->id == 0 ? HeapGetCurrent() - HeapGetStart() : 0);
 				
-				ConWriteFormated("Name: %s | ID: %d | Usage: %d %s\r\n%s", name, proc->id, BVal(usage), BStr(usage), i->next == Null ? "\r\n" : "");
+				ConWriteFormated(L"Name: %s | ID: %d | Usage: %d %s\r\n%s", name, proc->id, BVal(usage), BStr(usage), i->next == Null ? L"\r\n" : L"");
 			}
 			
 			DispRefresh();																																// Refresh the screen
 			ConSetRefresh(True);																														// Enable screen refresh
-		} else if (StrGetLength(argv[0]) == 3 && StrCompare(argv[0], "ver")) {																			// Print the system version
-			ConWriteFormated("CHicago Operating System for %s\r\nCodename '%s'\r\n%s\r\n\r\n", CHICAGO_ARCH, CHICAGO_CODENAME, CHICAGO_VSTR);
+		} else if (StrGetLength(argv[0]) == 3 && StrCompare(argv[0], L"ver")) {																			// Print the system version
+			ConWriteFormated(L"CHicago Operating System for %s\r\nCodename '%s'\r\n%s\r\n\r\n", CHICAGO_ARCH, CHICAGO_CODENAME, CHICAGO_VSTR);
 		} else {
-			ConWriteFormated("Invalid command '%s'\r\n\r\n", argv[0]);																					// Invalid command!
+			ConWriteFormated(L"Invalid command '%s'\r\n\r\n", argv[0]);																					// Invalid command!
 		}
 	}
 	
@@ -107,7 +107,7 @@ static Void ShellMain(Void) {
 }
 
 Void ShellRun(Void) {
-	PProcess proc = PsCreateProcess("Shell", (UIntPtr)ShellMain);																						// Create the shell process
+	PProcess proc = PsCreateProcess(L"Shell", (UIntPtr)ShellMain);																						// Create the shell process
 	
 	if (proc == Null) {
 		DbgWriteFormated("PANIC! Couldn't init the shell\r\n");																							// Failed... PANIC!

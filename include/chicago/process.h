@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:42 BRT
-// Last edited on December 09 of 2018, at 10:56 BRT
+// Last edited on December 09 of 2018, at 16:58 BRT
 
 #ifndef __CHICAGO_PROCESS_H__
 #define __CHICAGO_PROCESS_H__
@@ -21,7 +21,7 @@ typedef Boolean Lock, *PLock;
 
 typedef struct {
 	UIntPtr id;
-	PChar name;
+	PWChar name;
 	UIntPtr dir;
 	PList threads;
 	UIntPtr last_tid;
@@ -31,7 +31,7 @@ typedef struct {
 	PList global_handle_list;
 	PList files;
 	IntPtr last_fid;
-	PChar exec_path;
+	PWChar exec_path;
 } Process, *PProcess;
 
 typedef struct {
@@ -54,9 +54,9 @@ extern PList PsProcessList;
 #endif
 
 PThread PsCreateThreadInt(UIntPtr entry, UIntPtr userstack, Boolean user);
-PProcess PsCreateProcessInt(PChar name, UIntPtr entry, UIntPtr dir);
+PProcess PsCreateProcessInt(PWChar name, UIntPtr entry, UIntPtr dir);
 PThread PsCreateThread(UIntPtr entry, UIntPtr userstack, Boolean user);
-PProcess PsCreateProcess(PChar name, UIntPtr entry);
+PProcess PsCreateProcess(PWChar name, UIntPtr entry);
 Void PsAddThread(PThread th);
 Void PsAddProcess(PProcess proc);
 PThread PsGetThread(UIntPtr id);

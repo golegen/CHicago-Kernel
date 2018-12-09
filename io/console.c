@@ -1,13 +1,12 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on December 08 of 2018, at 11:01 BRT
+// Last edited on December 09 of 2018, at 17:58 BRT
 
 #include <chicago/display.h>
 #include <chicago/process.h>
 #include <chicago/string.h>
 
-IntPtr ConScale = 1;
 Lock ConLock = False;
 UIntPtr ConCursorX = 0;
 UIntPtr ConCursorY = 0;
@@ -23,22 +22,9 @@ Void ConSetRefresh(Boolean s) {
 
 Boolean ConGetRefresh(Void) {
 	PsLock(&ConLock);																												// Lock
-	Boolean s = ConScale;																											// Save the automatic refresh prop
+	Boolean s = ConRefresh;																											// Save the automatic refresh prop
 	PsUnlock(&ConLock);																												// Unlock
 	return s;																														// Return it
-}
-
-Void ConSetScale(IntPtr scale) {
-	PsLock(&ConLock);																												// Lock
-	ConScale = scale;																												// Set the scale of the console font
-	PsUnlock(&ConLock);																												// Unlock
-}
-
-IntPtr ConGetScale(Void) {
-	PsLock(&ConLock);																												// Lock
-	IntPtr scale = ConScale;																										// Save the scale
-	PsUnlock(&ConLock);																												// Unlock
-	return scale;																													// Return it
 }
 
 Void ConSetColor(UIntPtr bg, UIntPtr fg) {
@@ -147,17 +133,17 @@ Void ConClearScreen(Void) {
 	PsUnlock(&ConLock);																												// Unlock
 }
 
-static Void ConWriteCharacterInt(Char data) {
+static Void ConWriteCharacterInt(WChar data) {
 	switch (data) {
 	case '\b': {																													// Backspace
 		if (ConCursorX > 0) {																										// We have any more characters to delete in this line?
 			ConCursorX--;																											// Yes
 		} else if (ConCursorY > 0) {																								// We have any more lines?																										
 			ConCursorY--;																											// Yes
-			ConCursorX = DispGetWidth() / (ConScale * 8) - 1;
+			ConCursorX = DispGetWidth() / 8 - 1;
 		}
 		
-		DispFillRectangle(ConCursorX * (ConScale * 8), ConCursorY * (ConScale * 16), ConScale * 8, ConScale * 16, ConBackColor);
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);
 		
 		break;
 	}
@@ -174,12 +160,18 @@ static Void ConWriteCharacterInt(Char data) {
 		break;
 	}
 	default: {																														// Character
-		for (IntPtr i = 0; i < ConScale * 16; i++) {
-			for (IntPtr j = ConScale * 8; j >= 0; j--) {
-				if (DispFont[(UInt8)data][i * 8 / (ConScale * 8)] & (1 << (j * 16 / (ConScale * 16)))) {							// Put pixel if we need
-					DispPutPixel((ConCursorX * (ConScale * 8)) + j, (ConCursorY * (ConScale * 16)) + i, ConForeColor);
-				}
+		PPCScreenFont font = (PPCScreenFont)DispFontStart;
+		PUInt8 glyph = (PUInt8)(DispFontStart + font->hdr_size + (data * font->bytes_per_glyph));
+		
+		for (UIntPtr i = 0; i < 16; i++) {
+			UIntPtr mask = 1 << 7;
+			
+			for (UIntPtr j = 0; j < 8; j++) {
+				DispPutPixel((ConCursorX * 8) + j, (ConCursorY * 16) + i, (*glyph & mask) ? ConForeColor : ConBackColor);
+				mask >>= 1;
 			}
+			
+			glyph++;
 		}
 		
 		ConCursorX++;
@@ -188,18 +180,18 @@ static Void ConWriteCharacterInt(Char data) {
 	}
 	}
 	
-	if (ConCursorX >= DispGetWidth() / (ConScale * 8)) {																			// Go to the next line?
+	if (ConCursorX >= DispGetWidth() / 8) {																							// Go to the next line?
 		ConCursorX = 0;																												// Yes
 		ConCursorY++;
 	}
 	
-	if (ConCursorY >= DispGetHeight() / (ConScale * 16)) {																			// Scroll up?
-		DispScrollScreen(ConScale, ConBackColor);																					// Yes
-		ConCursorY = DispGetHeight() / (ConScale * 16) - 1;
+	if (ConCursorY >= DispGetHeight() / 16) {																						// Scroll up?
+		DispScrollScreen(ConBackColor);																								// Yes
+		ConCursorY = (DispGetHeight() / 16) - 1;
 	}
 }
 
-Void ConWriteCharacter(Char data) {
+Void ConWriteCharacter(WChar data) {
 	PsLock(&ConLock);																												// Lock
 	ConWriteCharacterInt(data);																										// Write the character
 	
@@ -210,7 +202,7 @@ Void ConWriteCharacter(Char data) {
 	PsUnlock(&ConLock);																												// Unlock
 }
 
-static Void ConWriteStringInt(PChar data) {
+static Void ConWriteStringInt(PWChar data) {
 	if (data == Null) {
 		return;
 	}
@@ -220,7 +212,7 @@ static Void ConWriteStringInt(PChar data) {
 	}
 }
 
-Void ConWriteString(PChar data) {
+Void ConWriteString(PWChar data) {
 	PsLock(&ConLock);																												// Lock
 	ConWriteStringInt(data);																										// Write the string
 	
@@ -237,11 +229,11 @@ static Void ConWriteIntegerInt(UIntPtr data, UInt8 base) {
 		return;
 	}
 	
-	static Char buf[32] = { 0 };
+	static WChar buf[32] = { 0 };
 	Int i = 30;
 	
 	for (; data && i; i--, data /= base) {
-		buf[i] = "0123456789ABCDEF"[data % base];
+		buf[i] = L"0123456789ABCDEF"[data % base];
 	}
 	
 	ConWriteStringInt(&buf[i + 1]);
@@ -258,7 +250,7 @@ Void ConWriteInteger(UIntPtr data, UInt8 base) {
 	PsUnlock(&ConLock);																												// Unlock
 }
 
-Void ConWriteFormated(PChar data, ...) {
+Void ConWriteFormated(PWChar data, ...) {
 	if (data == Null) {
 		return;
 	}
@@ -277,7 +269,7 @@ Void ConWriteFormated(PChar data, ...) {
 		} else {
 			switch (data[++i]) {																									// Yes, let's parse it!
 			case 's': {																												// String
-				ConWriteStringInt((PChar)VariadicArg(va, PChar));
+				ConWriteStringInt((PWChar)VariadicArg(va, PWChar));
 				break;
 			}
 			case 'c': {																												// Character

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:21 BRT
-// Last edited on November 17 of 2018, at 11:44 BRT
+// Last edited on December 09 of 2018, at 19:11 BRT
 
 #include <chicago/arch/bootmgr.h>
 #include <chicago/arch/gdt.h>
@@ -14,6 +14,7 @@
 #include <chicago/arch/serial.h>
 #include <chicago/arch/vmm.h>
 
+#include <chicago/alloc.h>
 #include <chicago/debug.h>
 #include <chicago/device.h>
 #include <chicago/display.h>
@@ -113,7 +114,15 @@ Void ArchInit(Void) {
 	FsInitDeviceList();																							// Init the x86-only devices (and the device list)
 	IDEInit();
 	
-	FsSetBootDevice(BootmgrBootDev);																			// Try to set the boot device
+	PWChar bootdev = (PWChar)MemAllocate((StrGetLengthC(BootmgrBootDev) + 1) * 4);								// Let's transform the C string into unicode!
+	
+	if (bootdev == Null) {
+		DbgWriteFormated("PANIC! Couldn't set the boot device\r\n");
+		Panic(PANIC_KERNEL_INIT_FAILED);
+	}
+	
+	StrUnicodeFromC(bootdev, BootmgrBootDev, StrGetLengthC(BootmgrBootDev));
+	FsSetBootDevice(bootdev);																					// Try to set the boot device
 	
 	if (FsGetBootDevice() == Null) {
 		DbgWriteFormated("PANIC! Couldn't set the boot device\r\n");

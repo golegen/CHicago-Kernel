@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 01:04 BRT
-// Last edited on November 16 of 2018, at 16:18 BRT
+// Last edited on December 09 of 2018, at 16:59 BRT
 
 #ifndef __CHICAGO_SC_H__
 #define __CHICAGO_SC_H__
@@ -13,8 +13,8 @@ typedef struct {
 	PUInt32 major;
 	PUInt32 minor;
 	PUInt32 build;
-	PChar codename;
-	PChar arch;
+	PWChar codename;
+	PWChar arch;
 } SystemVersion, *PSystemVersion;
 
 Void ScSysGetVersion(PSystemVersion ver);
@@ -38,15 +38,15 @@ Void ScPsUnlock(PLock lock);
 Void ScPsExitThread(Void);
 Void ScPsExitProcess(Void);
 Void ScPsForceSwitch(Void);
-IntPtr ScFsOpenFile(PChar path);
+IntPtr ScFsOpenFile(PWChar path);
 Void ScFsCloseFile(IntPtr file);
 Boolean ScFsReadFile(IntPtr file, UIntPtr len, PUInt8 buf);
 Boolean ScFsWriteFile(IntPtr file, UIntPtr len, PUInt8 buf);
-Boolean ScFsMountFile(PChar path, PChar file, PChar type);
-Boolean ScFsUmountFile(PChar path);
-Boolean ScFsReadDirectoryEntry(IntPtr dir, UIntPtr entry, PChar out);
-IntPtr ScFsFindInDirectory(IntPtr dir, PChar name);
-Boolean ScFsCreateFile(IntPtr dir, PChar name, UIntPtr type);
+Boolean ScFsMountFile(PWChar path, PWChar file, PWChar type);
+Boolean ScFsUmountFile(PWChar path);
+Boolean ScFsReadDirectoryEntry(IntPtr dir, UIntPtr entry, PWChar out);
+IntPtr ScFsFindInDirectory(IntPtr dir, PWChar name);
+Boolean ScFsCreateFile(IntPtr dir, PWChar name, UIntPtr type);
 Boolean ScFsControlFile(IntPtr file, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf);
 UIntPtr ScFsGetFileSize(IntPtr file);
 UIntPtr ScFsGetPosition(IntPtr file);

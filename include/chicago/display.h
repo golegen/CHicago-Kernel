@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 18 of 2018, at 21:17 BRT
-// Last edited on November 10 of 2018, at 19:12 BRT
+// Last edited on December 09 of 2018, at 16:35 BRT
 
 #ifndef __CHICAGO_DISPLAY_H__
 #define __CHICAGO_DISPLAY_H__
@@ -9,6 +9,8 @@
 #include <chicago/types.h>
 
 #define DispBootSplashImage (&_binary_splash_bmp_start)
+#define DispFontStart (&_binary_font_psf_start)
+#define DispFontEnd (&_binary_font_psf_end)
 
 typedef struct {
 	UInt8 b;
@@ -33,11 +35,20 @@ typedef struct {
 	UInt32 clr_important;
 } Packed BmpInfoHeader, *PBmpInfoHeader;
 
-#ifndef __CHICAGO_DISPLAY__
-extern UInt8 DispFont[128][16];
-#endif
+typedef struct {
+	UInt32 magic;
+	UInt32 version;
+	UInt32 hdr_size;
+	UInt32 flags;
+	UInt32 num_glyph;
+	UInt32 bytes_per_glyph;
+	UInt32 height;
+	UInt32 width;
+} PCScreenFont, *PPCScreenFont;
 
 extern UInt8 _binary_splash_bmp_start;
+extern Char _binary_font_psf_start;
+extern Char _binary_font_psf_end;
 
 UIntPtr DispGetFrameBuffer(Void);
 UInt8 DispGetBytesPerPixel(Void);
@@ -46,7 +57,7 @@ UIntPtr DispGetHeight(Void);
 Void DispExtractARGB(UIntPtr c, PUInt8 a, PUInt8 r, PUInt8 g, PUInt8 b);
 Void DispRefresh(Void);
 Void DispClearScreen(UIntPtr c);
-Void DispScrollScreen(IntPtr scale, UIntPtr c);
+Void DispScrollScreen(UIntPtr c);
 Void DispPutPixel(UIntPtr x, UIntPtr y, UIntPtr c);
 Void DispDrawLine(UIntPtr x0, UIntPtr y0, UIntPtr x1, UIntPtr y1, UIntPtr c);
 Void DispDrawRectangle(UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UIntPtr c);
@@ -54,7 +65,7 @@ Void DispFillRectangle(UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UIntPtr c);
 Void DispDrawRoundedRectangle(UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UIntPtr r, UIntPtr c);
 Void DispFillRoundedRectangle(UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UIntPtr r, UIntPtr c);
 Void DispDrawBitmap(PUInt8 bmp, UIntPtr x, UIntPtr y);
-Void DispWriteFormated(UIntPtr x, UIntPtr y, UIntPtr bg, UIntPtr fg, Const PChar data, ...);
+Void DispWriteFormated(UIntPtr x, UIntPtr y, UIntPtr bg, UIntPtr fg, Const PWChar data, ...);
 Void DispIncrementProgessBar(Void);
 Void DispFillProgressBar(Void);
 Void DispDrawProgessBar(Void);

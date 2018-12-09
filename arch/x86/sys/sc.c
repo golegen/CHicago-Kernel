@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 00:48 BRT
-// Last edited on November 17 of 2018, at 13:27 BRT
+// Last edited on December 09 of 2018, at 16:52 BRT
 
 #include <chicago/arch/idt.h>
 #include <chicago/sc.h>
@@ -92,8 +92,8 @@ Void ArchScHandler(PRegisters regs) {
 		ScPsForceSwitch();
 		break;
 	}
-	case 0x15: {																						// IntPtr FsOpenFile(PChar path)
-		regs->eax = ScFsOpenFile((PChar)regs->ebx);
+	case 0x15: {																						// IntPtr FsOpenFile(PWChar path)
+		regs->eax = ScFsOpenFile((PWChar)regs->ebx);
 		break;
 	}
 	case 0x16: {																						// Void FsCloseFile(IntPtr file)
@@ -108,24 +108,24 @@ Void ArchScHandler(PRegisters regs) {
 		regs->eax = ScFsWriteFile(regs->ebx, regs->ecx, (PUInt8)regs->edx);
 		break;
 	}
-	case 0x19: {																						// Boolean FsMountFile(PChar path, PChar file, PChar type)
-		regs->eax = ScFsMountFile((PChar)regs->ebx, (PChar)regs->ecx, (PChar)regs->edx);
+	case 0x19: {																						// Boolean FsMountFile(PWChar path, PWChar file, PWChar type)
+		regs->eax = ScFsMountFile((PWChar)regs->ebx, (PWChar)regs->ecx, (PWChar)regs->edx);
 		break;
 	}
-	case 0x1A: {																						// Boolean FsUmountFile(PChar path)
-		regs->eax = ScFsUmountFile((PChar)regs->ebx);
+	case 0x1A: {																						// Boolean FsUmountFile(PWChar path)
+		regs->eax = ScFsUmountFile((PWChar)regs->ebx);
 		break;
 	}
-	case 0x1B: {																						// Boolean FsReadDirectoryEntry(IntPtr dir, UIntPtr entry, PChar out)
-		regs->eax = ScFsReadDirectoryEntry(regs->ebx, regs->ecx, (PChar)regs->edx);
+	case 0x1B: {																						// Boolean FsReadDirectoryEntry(IntPtr dir, UIntPtr entry, PWChar out)
+		regs->eax = ScFsReadDirectoryEntry(regs->ebx, regs->ecx, (PWChar)regs->edx);
 		break;
 	}
-	case 0x1C: {																						// IntPtr FsFindInDirectory(IntPtr dir, PChar name)
-		regs->eax = ScFsFindInDirectory(regs->ebx, (PChar)regs->ecx);
+	case 0x1C: {																						// IntPtr FsFindInDirectory(IntPtr dir, PWChar name)
+		regs->eax = ScFsFindInDirectory(regs->ebx, (PWChar)regs->ecx);
 		break;
 	}
-	case 0x1D: {																						// Boolean FsCreateFile(IntPtr dir, PChar name, UIntPtr type)
-		regs->eax = ScFsCreateFile(regs->ebx, (PChar)regs->ecx, regs->edx);
+	case 0x1D: {																						// Boolean FsCreateFile(IntPtr dir, PWChar name, UIntPtr type)
+		regs->eax = ScFsCreateFile(regs->ebx, (PWChar)regs->ecx, regs->edx);
 		break;
 	}
 	case 0x1E: {																						// Boolean FsControlFile(IntPtr file, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf)

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:15 BRT
-// Last edited on October 14 of 2018, at 18:45 BRT
+// Last edited on December 09 of 2018, at 19:04 BRT
 
 #ifndef __CHICAGO_TYPES_H__
 #define __CHICAGO_TYPES_H__
@@ -36,6 +36,7 @@ typedef unsigned Long Long UInt64, *PUInt64;
 typedef signed Char Int8, *PInt8;
 typedef signed Short Int16, *PInt16;
 typedef signed Int Int32, *PInt32;
+typedef signed Int WChar, *PWChar;
 typedef signed Long Long Int64, *PInt64;
 
 /* Define our IntPtr type */
@@ -78,7 +79,10 @@ typedef Char Boolean, *PBoolean;
 
 #define Const const
 
-#define TextifyMacro1(n) #n
+#define TextifyMacro1(n) TextifyMacro2(#n)
+#define TextifyMacro2(n) L##n
+#define TextifyMacro3(n) #n
 #define TextifyMacro(n) TextifyMacro1(n)
+#define TextifyMacroC(n) TextifyMacro3(n)
 
 #endif		// __CHICAGO_TYPES_H__

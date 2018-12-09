@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 16 of 2018, at 18:29 BRT
-// Last edited on November 16 of 2018, at 01:46 BRT
+// Last edited on December 09 of 2018, at 18:13 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -55,7 +55,7 @@ Boolean DevFsOpenFile(PFsNode node) {
 Void DevFsCloseFile(PFsNode node) {
 	if (node == Null) {																			// Null pointer?
 		return;																					// Yes
-	} else if (StrCompare(node->name, "\\")) {													// Root directory?
+	} else if (StrCompare(node->name, L"\\")) {													// Root directory?
 		return;																					// Yes, DON'T FREE IT, NEVER!
 	}
 	
@@ -63,7 +63,7 @@ Void DevFsCloseFile(PFsNode node) {
 	MemFree((UIntPtr)node);
 }
 
-PChar DevFsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
+PWChar DevFsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 	if (dir == Null) {																			// Any null pointer?
 		return Null;																			// Yes, so we can't continue
 	} else if ((dir->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {										// We're trying to do ReadDirectoryEntry in an... File?
@@ -79,7 +79,7 @@ PChar DevFsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 	}
 }
 
-PFsNode DevFsFindInDirectory(PFsNode dir, PChar name) {
+PFsNode DevFsFindInDirectory(PFsNode dir, PWChar name) {
 	if ((dir == Null) || (name == Null)) {														// Any null pointer?
 		return Null;																			// Yes, so we can't continue
 	} else if ((dir->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {										// We're trying to do FindInDirectory in an... File?
@@ -146,14 +146,14 @@ Boolean DevFsControlFile(PFsNode file, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf) {
 }
 
 Void DevFsInit(Void) {
-	PChar path = StrDuplicate("\\Devices");														// Try to duplicate the path string
+	PWChar path = StrDuplicate(L"\\Devices");													// Try to duplicate the path string
 	
 	if (path == Null) {																			// Failed?
 		DbgWriteFormated("PANIC! Couldn't mount \\Devices\r\n");								// Yes (halt, as we need DevFs for everything)
 		Panic(PANIC_KERNEL_INIT_FAILED);
 	}
 	
-	PChar type = StrDuplicate("DevFs");															// Try to duplicate the type string
+	PWChar type = StrDuplicate(L"DevFs");														// Try to duplicate the type string
 	
 	if (type == Null) {																			// Failed?
 		DbgWriteFormated("PANIC! Couldn't mount \\Devices\r\n");								// Yes (same as above)
@@ -167,7 +167,7 @@ Void DevFsInit(Void) {
 		Panic(PANIC_KERNEL_INIT_FAILED);
 	}
 	
-	root->name = StrDuplicate("\\");															// Try to duplicate the root directory string
+	root->name = StrDuplicate(L"\\");															// Try to duplicate the root directory string
 	
 	if (root->name == Null) {																	// Failed?
 		DbgWriteFormated("PANIC! Couldn't mount \\Devices\r\n");								// Yes (same as above)

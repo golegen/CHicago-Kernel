@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 19 of 2018, at 21:40 BRT
-// Last edited on October 27 of 2018, at 22:25 BRT
+// Last edited on December 09 of 2018, at 17:34 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -58,7 +58,7 @@ Void RawMouseDeviceInit(Void) {
 	RawMouseDeviceQueue.free = False;
 	RawMouseDeviceQueue.user = False;
 	
-	if (!FsAddDevice("RawMouse", Null, RawMouseDeviceReadInt, Null, Null)) {
+	if (!FsAddDevice(L"RawMouse", Null, RawMouseDeviceReadInt, Null, Null)) {
 		DbgWriteFormated("PANIC! Failed to add the RawMouse device\r\n");
 		Panic(PANIC_KERNEL_INIT_FAILED);
 	}

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 28 of 2018, at 09:41 BRT
-// Last edited on November 16 of 2018, at 01:09 BRT
+// Last edited on December 09 of 2018, at 17:36 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/chfs.h>
@@ -333,7 +333,7 @@ Boolean CHFsOpenFile(PFsNode node) {
 Void CHFsCloseFile(PFsNode node) {
 	if (node == Null) {																							// Null pointer?
 		return;																									// Yes
-	} else if (StrCompare(node->name, "\\")) {																	// Root directory?
+	} else if (StrCompare(node->name, L"\\")) {																	// Root directory?
 		return;																									// Yes, don't free it, it's important for us (only the umount function can free it)
 	}
 	
@@ -341,12 +341,12 @@ Void CHFsCloseFile(PFsNode node) {
 	MemFree((UIntPtr)node);
 }
 
-Boolean CHFsCreateFile(PFsNode dir, PChar name, UIntPtr flags) {
+Boolean CHFsCreateFile(PFsNode dir, PWChar name, UIntPtr flags) {
 	if ((dir == Null) || (name == Null) || (dir->priv == Null) || (dir->inode == 0)) {							// Let's do some null pointer checks first!
 		return False;
 	} else if ((dir->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {														// Trying to create an directory entry inside of a file... why?
 		return False;
-	} else if (StrCompare(name, ".") || StrCompare(name, "..")) {												// We can't create '.' nor '..'
+	} else if (StrCompare(name, L".") || StrCompare(name, L"..")) {												// We can't create '.' nor '..'
 		return False;
 	}
 	
@@ -465,15 +465,15 @@ Boolean CHFsCreateFile(PFsNode dir, PChar name, UIntPtr flags) {
 	return True;
 }
 
-PChar CHFsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
+PWChar CHFsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 	if ((dir == Null) || (dir->priv == Null) || (dir->inode == 0)) {											// Let's do some null pointer checks first!
 		return Null;
 	} else if ((dir->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {														// Trying to read an directory entry using an file... why?
 		return Null;
 	} else if (entry == 0) {																					// Current directory?
-		return StrDuplicate(".");
+		return StrDuplicate(L".");
 	} else if (entry == 1) {																					// Parent directory?
-		return StrDuplicate("..");
+		return StrDuplicate(L"..");
 	}
 	
 	PCHFsMountInfo info = (PCHFsMountInfo)dir->priv;
@@ -512,7 +512,7 @@ PChar CHFsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 			return Null;
 		} else if (i == entry - 2) {
 			UIntPtr nlen = ent->name_length;																	// Save the name length
-			PChar ret = (PChar)MemAllocate(nlen + 1);															// Alloc space for it
+			PWChar ret = (PWChar)MemAllocate(nlen + 2);															// Alloc space for it
 			
 			if (ret == Null) {
 				MemFree((UIntPtr)buff);																			// :(
@@ -547,12 +547,12 @@ PChar CHFsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 	return Null;
 }
 
-PFsNode CHFsFindInDirectory(PFsNode dir, PChar name) {
+PFsNode CHFsFindInDirectory(PFsNode dir, PWChar name) {
 	if ((dir == Null) || (name == Null) || (dir->priv == Null) || (dir->inode == 0)) {							// Let's do some null pointer checks first!
 		return Null;
 	} else if ((dir->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {														// Trying to read an directory entry using an file... why?
 		return Null;
-	} else if (StrCompare(name, ".") || StrCompare(name, "..")) {												// The . and the .. entries doesn't really exists
+	} else if (StrCompare(name, L".") || StrCompare(name, L"..")) {												// The . and the .. entries doesn't really exists
 		return Null;
 	}
 	
@@ -586,14 +586,14 @@ PFsNode CHFsFindInDirectory(PFsNode dir, PChar name) {
 		return Null;
 	}
 	
-	while (True) {																									// Let's search for the entry!
+	while (True) {																								// Let's search for the entry!
 		if (ent->type == 0x00) {																				// End of the directory?
 			MemFree((UIntPtr)buff);																				// Yes :(
 			MemFree((UIntPtr)inode);
 			return Null;
 		}
 		
-		PChar entname = (PChar)MemAllocate(ent->name_length + 1);												// Alloc space for copying the name of this entry
+		PWChar entname = (PWChar)MemAllocate(ent->name_length + 2);												// Alloc space for copying the name of this entry
 		
 		if (entname == Null) {
 			MemFree((UIntPtr)buff);																				// Failed...
@@ -696,7 +696,7 @@ Boolean CHFsProbe(PFsNode file) {
 	return False;
 }
 
-PFsMountPoint CHFsMount(PFsNode file, PChar path) {
+PFsMountPoint CHFsMount(PFsNode file, PWChar path) {
 	if ((file == Null) || (path == Null)) {																		// Sanity checks :)
 		return Null;
 	} else if ((file->flags & FS_FLAG_FILE) != FS_FLAG_FILE) {
@@ -746,7 +746,7 @@ PFsMountPoint CHFsMount(PFsNode file, PChar path) {
 		return Null;
 	}
 	
-	mp->type = StrDuplicate("CHFs");																			// And the type string
+	mp->type = StrDuplicate(L"CHFs");																			// And the type string
 	
 	if (mp->type == Null) {
 		MemFree((UIntPtr)mp->path);
@@ -765,7 +765,7 @@ PFsMountPoint CHFsMount(PFsNode file, PChar path) {
 		return Null;
 	}
 	
-	mp->root->name = StrDuplicate("\\");																		// Duplicate the name
+	mp->root->name = StrDuplicate(L"\\");																		// Duplicate the name
 	
 	if (mp->root->name == Null) {
 		MemFree((UIntPtr)mp->root);
@@ -800,7 +800,7 @@ Boolean CHFsUmount(PFsMountPoint mp) {
 		return False;
 	} else if (mp->root->priv == Null) {
 		return False;
-	} else if (!StrCompare(mp->type, "CHFs")) {
+	} else if (!StrCompare(mp->type, L"CHFs")) {
 		return False;
 	}
 	
@@ -813,7 +813,7 @@ Boolean CHFsUmount(PFsMountPoint mp) {
 }
 
 Void CHFsInit(Void) {
-	PChar name = StrDuplicate("CHFs");																			// Let's get our type string
+	PWChar name = StrDuplicate(L"CHFs");																			// Let's get our type string
 	
 	if (name == Null) {
 		return;																									// Failed...

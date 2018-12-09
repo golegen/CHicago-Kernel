@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 15 of 2018, at 22:20 BRT
-// Last edited on November 15 of 2018, at 22:59 BRT
+// Last edited on December 09 of 2018, at 17:08 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -12,7 +12,7 @@
 
 PList IpcPortList = Null;
 
-PIpcPort IpcCreatePort(PChar name) {
+PIpcPort IpcCreatePort(PWChar name) {
 	if (PsCurrentProcess == Null || IpcPortList == Null || name == Null) {				// Sanity checks
 		return Null;																	// Nope...
 	}
@@ -46,7 +46,7 @@ PIpcPort IpcCreatePort(PChar name) {
 	return port;
 }
 
-Void IpcRemovePort(PChar name) {
+Void IpcRemovePort(PWChar name) {
 	if (PsCurrentProcess == Null || IpcPortList == Null || name == Null) {				// Sanity checks
 		return;
 	}
@@ -76,7 +76,7 @@ Void IpcRemovePort(PChar name) {
 	MemFree((UIntPtr)port);																// Free the struct itself
 }
 
-Void IpcSendMessage(PChar name, UInt32 msg, UIntPtr size, PUInt8 buf) {
+Void IpcSendMessage(PWChar name, UInt32 msg, UIntPtr size, PUInt8 buf) {
 	if (PsCurrentProcess == Null || IpcPortList == Null || name == Null) {				// Sanity checks
 		return;
 	}
@@ -120,7 +120,7 @@ Void IpcSendMessage(PChar name, UInt32 msg, UIntPtr size, PUInt8 buf) {
 	PsUnlockTaskSwitch(old);															// Unlock
 }
 
-PIpcMessage IpcReceiveMessage(PChar name) {
+PIpcMessage IpcReceiveMessage(PWChar name) {
 	if (PsCurrentProcess == Null || IpcPortList == Null || name == Null) {				// Sanity checks
 		return Null;
 	}

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 15 of 2018, at 19:05 BRT
-// Last edited on November 10 of 2018, at 19:18 BRT
+// Last edited on December 09 of 2018, at 19:08 BRT
 
 #include <chicago/alloc.h>
 
@@ -96,7 +96,7 @@ Boolean StrCompareMemory(PVoid m1, PVoid m2, UIntPtr count) {
 	return True;
 }
 
-UIntPtr StrGetLength(PChar str) {
+UIntPtr StrGetLength(PWChar str) {
 	if (str == Null) {																// Str is an Null pointer?
 		return 0;																	// Yes
 	}
@@ -108,29 +108,62 @@ UIntPtr StrGetLength(PChar str) {
 	return n;
 }
 
-Boolean StrCompare(PChar dest, PChar src) {
-	return StrCompareMemory(dest, src, StrGetLength(dest));							// Just redirect to the StrCompareMemory function
+UIntPtr StrGetLengthC(PChar str) {
+	if (str == Null) {																// Str is an Null pointer?
+		return 0;																	// Yes
+	}
+	
+	UIntPtr n = 0;
+	
+	for (; str[n] != 0; n++) ;														// Again, GCC should optimize this for us (if possible)
+	
+	return n;
 }
 
-PChar StrCopy(PChar dest, PChar src) {
-	return StrCopyMemory(dest, src, StrGetLength(src) + 1);							// Just redirect to StrCopyMemory function
+Boolean StrCompare(PWChar dest, PWChar src) {
+	return StrCompareMemory(dest, src, StrGetLength(dest) * 4);						// Just redirect to the StrCompareMemory function
 }
 
-Void StrConcatenate(PChar dest, PChar src) {
+Boolean StrCompareC(PChar dest, PChar src) {
+	return StrCompareMemory(dest, src, StrGetLengthC(dest) + 1);					// Just redirect to the StrCompareMemory function
+}
+
+PWChar StrCopy(PWChar dest, PWChar src) {
+	return StrCopyMemory32(dest, src, StrGetLength(src) + 1);						// Just redirect to StrCopyMemory function
+}
+
+PChar StrCopyC(PChar dest, PChar src) {
+	return StrCopyMemory(dest, src, StrGetLengthC(src) + 1);						// Just redirect to StrCopyMemory function
+}
+
+Void StrConcatenate(PWChar dest, PWChar src) {
 	if ((dest == Null) || (src == Null)) {											// Destination is an Null pointer? Source is an Null pointer?
 		return;																		// Yes :(
 	}
 	
-	PChar end = dest + StrGetLength(dest);											// Let's do it!
+	PWChar end = dest + StrGetLength(dest);											// Let's do it!
 	
-	StrCopyMemory(end, src, StrGetLength(src));										// Let's append the src to dest
+	StrCopyMemory32(end, src, StrGetLength(src));									// Let's append the src to dest
 	
 	end += StrGetLength(src);														// And put an 0 (NUL) at the end
 	*end = '\0';
 }
 
-PChar StrDuplicate(PChar str) {
-	PChar ret = (PChar)MemAllocate(StrGetLength(str) + 1);
+Void StrConcatenateC(PChar dest, PChar src) {
+	if ((dest == Null) || (src == Null)) {											// Destination is an Null pointer? Source is an Null pointer?
+		return;																		// Yes :(
+	}
+	
+	PChar end = dest + StrGetLengthC(dest);											// Let's do it!
+	
+	StrCopyMemory(end, src, StrGetLengthC(src));									// Let's append the src to dest
+	
+	end += StrGetLengthC(src);														// And put an 0 (NUL) at the end
+	*end = '\0';
+}
+
+PWChar StrDuplicate(PWChar str) {
+	PWChar ret = (PWChar)MemAllocate((StrGetLength(str) + 1) * 4);
 	
 	if (ret == Null) {
 		return Null;
@@ -139,8 +172,18 @@ PChar StrDuplicate(PChar str) {
 	return StrCopy(ret, str);
 }
 
-PChar StrTokenize(PChar str, PChar delim) {
-	static PChar temp = Null;
+PChar StrDuplicateC(PChar str) {
+	PChar ret = (PChar)MemAllocate(StrGetLengthC(str) + 1);
+	
+	if (ret == Null) {
+		return Null;
+	}
+	
+	return StrCopyC(ret, str);
+}
+
+PWChar StrTokenize(PWChar str, PWChar delim) {
+	static PWChar temp = Null;
 	
 	if (str != Null) {																// First call?
 		if (temp != Null) {															// Free the current temp?
@@ -148,6 +191,60 @@ PChar StrTokenize(PChar str, PChar delim) {
 		}
 		
 		temp = StrDuplicate(str);													// Yes, try to set the copy the str to temp
+		
+		if (temp == Null) {															// Failed?
+			return Null;															// Yes
+		}
+	} else if (temp == Null) {														// Not the first call but temp is Null?
+		return Null;																// Yes, so return Null
+	} else {
+		str = temp;
+	}
+	
+	UIntPtr chars = 0;
+	UIntPtr flag = 0;
+	
+	while (*temp) {
+		for (PWChar d = delim; *d != '\0'; d++) {
+			if (*temp == *d) {														// Found delim in the string?
+				if (chars == 0) {													// First character in the string?
+					flag = 1;														// Yes, there may be other after it, so go to the next one
+					str++;
+				} else {
+					temp++;															// No, so we can return
+					str[chars] = '\0';
+					
+					return str;
+				}
+			}
+		}
+		
+		if (flag == 0) {															// Found delim?
+			chars++;																// No, so increase chars
+		}
+		
+		temp++;
+		flag = 0;
+	}
+	
+	temp = Null;
+	str[chars] = '\0';
+	str = StrDuplicate(str);														// *HACKHACKHACK*
+	
+	MemFree((UIntPtr)temp);
+	
+	return str;
+}
+
+PChar StrTokenizeC(PChar str, PChar delim) {
+	static PChar temp = Null;
+	
+	if (str != Null) {																// First call?
+		if (temp != Null) {															// Free the current temp?
+			MemFree((UIntPtr)temp);													// Yup
+		}
+		
+		temp = StrDuplicateC(str);													// Yes, try to set the copy the str to temp
 		
 		if (temp == Null) {															// Failed?
 			return Null;															// Yes
@@ -186,9 +283,21 @@ PChar StrTokenize(PChar str, PChar delim) {
 	
 	temp = Null;
 	str[chars] = '\0';
-	str = StrDuplicate(str);														// *HACKHACKHACK*
+	str = StrDuplicateC(str);														// *HACKHACKHACK*
 	
 	MemFree((UIntPtr)temp);
 	
 	return str;
+}
+
+Void StrUnicodeFromC(PWChar dest, PChar src, UIntPtr len) {
+	if ((dest == Null) || (src == Null) || (len == 0)) {							// Sanity checks
+		return;
+	}
+	
+	for (UIntPtr i = 0; i < len; i++) {												// Just copy :)
+		dest[i] = src[i];
+	}
+	
+	dest[len] = 0;
 }

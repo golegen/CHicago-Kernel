@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 07 of 2018, at 10:41 BRT
-// Last edited on December 08 of 2018, at 10:16 BRT
+// Last edited on December 09 of 2018, at 17:33 BRT
 
 #include <chicago/console.h>
 #include <chicago/debug.h>
@@ -12,7 +12,7 @@
 Queue ConsoleDeviceKeyboardQueue;
 Lock ConsoleDeviceKeyboardQueueLock = False;
 
-Void ConsoleDeviceReadKeyboard(UIntPtr len, PChar buf) {
+Void ConsoleDeviceReadKeyboard(UIntPtr len, PWChar buf) {
 	if (len == 0) {
 		return;
 	}
@@ -76,7 +76,7 @@ Void ConsoleDeviceClearKeyboard(Void) {
 
 Boolean ConsoleDeviceRead(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 	(Void)dev; (Void)off;																							// Avoid compiler's unused parameter warning
-	ConsoleDeviceReadKeyboard(len, (PChar)buf);																		// Redirect to RawKeyboardDeviceRead
+	ConsoleDeviceReadKeyboard(len, (PWChar)buf);																	// Redirect to RawKeyboardDeviceRead
 	return True;
 }
 
@@ -88,7 +88,7 @@ Boolean ConsoleDeviceWrite(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 	} else if (len == 1) {																							// We have only one character?
 		ConWriteCharacter(buf[0]);																					// Yes!
 	} else {
-		ConWriteString((PChar)buf);																					// No, so it's a string...
+		ConWriteString((PWChar)buf);																				// No, so it's a string...
 	}
 	
 	return True;
@@ -101,7 +101,7 @@ Void ConsoleDeviceInit(Void) {
 	ConsoleDeviceKeyboardQueue.free = False;
 	ConsoleDeviceKeyboardQueue.user = False;
 	
-	if (!FsAddDevice("Console", Null, ConsoleDeviceRead, ConsoleDeviceWrite, Null)) {								// Try to add the console device
+	if (!FsAddDevice(L"Console", Null, ConsoleDeviceRead, ConsoleDeviceWrite, Null)) {								// Try to add the console device
 		DbgWriteFormated("PANIC! Failed to add the Console device\r\n");											// Failed...
 		Panic(PANIC_KERNEL_INIT_FAILED);
 	}

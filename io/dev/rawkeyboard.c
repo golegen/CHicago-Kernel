@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 12 of 2018, at 21:08 BRT
-// Last edited on December 07 of 2018, at 17:40 BRT
+// Last edited on December 09 of 2018, at 17:34 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -64,7 +64,7 @@ Void RawKeyboardDeviceInit(Void) {
 	RawKeyboardDeviceQueue.free = False;
 	RawKeyboardDeviceQueue.user = False;
 	
-	if (!FsAddDevice("RawKeyboard", Null, RawKeyboardDeviceReadInt, Null, Null)) {			// Try to add the keyboard device
+	if (!FsAddDevice(L"RawKeyboard", Null, RawKeyboardDeviceReadInt, Null, Null)) {			// Try to add the keyboard device
 		DbgWriteFormated("PANIC! Failed to add the RawKeyboard device\r\n");				// Failed...
 		Panic(PANIC_KERNEL_INIT_FAILED);
 	}

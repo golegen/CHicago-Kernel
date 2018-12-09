@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 23:39 BRT
-// Last edited on October 27 of 2018, at 20:20 BRT
+// Last edited on December 09 of 2018, at 16:49 BRT
 
 #ifndef __CHICAGO_ARCH_IDE__
 #define __CHICAGO_ARCH_IDE__
@@ -83,8 +83,8 @@ typedef struct IDEDeviceStruct
 	UInt8 model[41];
 } IDEDevice, *PIDEDevice;
 
-PChar IDEGetHardDiskString(Void);
-PChar IDEGetCDROMString(Void);
+PWChar IDEGetHardDiskString(Void);
+PWChar IDEGetCDROMString(Void);
 Boolean IDEReadSectors(UInt8 bus, UInt8 drive, UInt8 count, UInt32 lba, PUInt8 buf);
 Boolean IDEWriteSectors(UInt8 bus, UInt8 drive, UInt8 count, UInt32 lba, PUInt8 buf);
 UIntPtr IDEGetBlockSize(UInt8 bus, UInt8 drive);

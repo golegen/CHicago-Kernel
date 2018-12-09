@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 27 of 2018, at 21:48 BRT
-// Last edited on December 09 of 2018, at 09:33 BRT
+// Last edited on December 09 of 2018, at 18:11 BRT
 
 #include <chicago/arch/registers.h>
 
@@ -13,27 +13,29 @@
 
 Void ArchPanicWriteHex(UInt32 val) {
 	if (val < 0x10) {
-		ConWriteFormated("0x0000000%x", val);
+		ConWriteFormated(L"0x0000000%x", val);
 	} else if (val < 0x100) {
-		ConWriteFormated("0x000000%x", val);
+		ConWriteFormated(L"0x000000%x", val);
 	} else if (val < 0x1000) {
-		ConWriteFormated("0x00000%x", val);
+		ConWriteFormated(L"0x00000%x", val);
 	} else if (val < 0x10000) {
-		ConWriteFormated("0x0000%x", val);
+		ConWriteFormated(L"0x0000%x", val);
 	} else if (val < 0x100000) {
-		ConWriteFormated("0x000%x", val);
+		ConWriteFormated(L"0x000%x", val);
 	} else if (val < 0x1000000) {
-		ConWriteFormated("0x00%x", val);
+		ConWriteFormated(L"0x00%x", val);
 	} else if (val < 0x10000000) {
-		ConWriteFormated("0x0%x", val);
+		ConWriteFormated(L"0x0%x", val);
 	} else {
-		ConWriteFormated("0x%x", val);
+		ConWriteFormated(L"0x%x", val);
 	}
 }
 
 Void ArchPanic(UInt32 err, PVoid priv) {
-	if (!((PsCurrentThread->id == 0) && (PsCurrentProcess->id == 0))) {											// Main kernel process?
-		PsExitProcess();																						// Nope, just PsExitProcess()
+	if (PsCurrentThread != Null) {																				// Tasking initialized?
+		if (!((PsCurrentThread->id == 0) && (PsCurrentProcess->id == 0))) {										// Yes, this is the main kernel process?
+			PsExitProcess();																					// Nope, just PsExitProcess()
+		}
 	}
 	
 	PsLockTaskSwitch(old);																						// Lock
@@ -45,30 +47,30 @@ Void ArchPanic(UInt32 err, PVoid priv) {
 	
 	PRegisters regs = (PRegisters)priv;																			// Cast the priv into the PRegisters struct
 	
-	ConWriteFormated("| EAX: "); ArchPanicWriteHex(regs->eax); ConWriteFormated(" | ");							// Print the registers
-	ConWriteFormated("EBX: "); ArchPanicWriteHex(regs->ebx); ConWriteFormated(" | ");
-	ConWriteFormated("ECX:    "); ArchPanicWriteHex(regs->ecx); ConWriteFormated(" | ");
-	ConWriteFormated("EDX: "); ArchPanicWriteHex(regs->edx); ConWriteFormated(" |\r\n");
+	ConWriteFormated(L"| EAX: "); ArchPanicWriteHex(regs->eax); ConWriteFormated(L" | ");						// Print the registers
+	ConWriteFormated(L"EBX: "); ArchPanicWriteHex(regs->ebx); ConWriteFormated(L" | ");
+	ConWriteFormated(L"ECX:    "); ArchPanicWriteHex(regs->ecx); ConWriteFormated(L" | ");
+	ConWriteFormated(L"EDX: "); ArchPanicWriteHex(regs->edx); ConWriteFormated(L" |\r\n");
 	
-	ConWriteFormated("| ESI: "); ArchPanicWriteHex(regs->esi); ConWriteFormated(" | ");
-	ConWriteFormated("EDI: "); ArchPanicWriteHex(regs->edi); ConWriteFormated(" | ");
-	ConWriteFormated("ESP:    "); ArchPanicWriteHex(regs->esp); ConWriteFormated(" | ");
-	ConWriteFormated("EBP: "); ArchPanicWriteHex(regs->ebp); ConWriteFormated(" |\r\n");
+	ConWriteFormated(L"| ESI: "); ArchPanicWriteHex(regs->esi); ConWriteFormated(L" | ");
+	ConWriteFormated(L"EDI: "); ArchPanicWriteHex(regs->edi); ConWriteFormated(L" | ");
+	ConWriteFormated(L"ESP:    "); ArchPanicWriteHex(regs->esp); ConWriteFormated(L" | ");
+	ConWriteFormated(L"EBP: "); ArchPanicWriteHex(regs->ebp); ConWriteFormated(L" |\r\n");
 	
-	ConWriteFormated("| EIP: "); ArchPanicWriteHex(regs->eip); ConWriteFormated(" | ");
-	ConWriteFormated("CR2: "); ArchPanicWriteHex(cr2); ConWriteFormated(" | ");
-	ConWriteFormated("EFLAGS: "); ArchPanicWriteHex(regs->eflags); ConWriteFormated(" | ");
-	ConWriteFormated("                |\r\n");
+	ConWriteFormated(L"| EIP: "); ArchPanicWriteHex(regs->eip); ConWriteFormated(L" | ");
+	ConWriteFormated(L"CR2: "); ArchPanicWriteHex(cr2); ConWriteFormated(L" | ");
+	ConWriteFormated(L"EFLAGS: "); ArchPanicWriteHex(regs->eflags); ConWriteFormated(L" | ");
+	ConWriteFormated(L"                |\r\n");
 	
-	ConWriteFormated("| CS:  "); ArchPanicWriteHex((UInt8)regs->cs); ConWriteFormated(" | ");
-	ConWriteFormated("DS:  "); ArchPanicWriteHex((UInt8)regs->ds); ConWriteFormated(" | ");
-	ConWriteFormated("ES:     "); ArchPanicWriteHex((UInt8)regs->es); ConWriteFormated(" | ");
-	ConWriteFormated("FS:  "); ArchPanicWriteHex((UInt8)regs->fs); ConWriteFormated(" |\r\n");
+	ConWriteFormated(L"| CS:  "); ArchPanicWriteHex((UInt8)regs->cs); ConWriteFormated(L" | ");
+	ConWriteFormated(L"DS:  "); ArchPanicWriteHex((UInt8)regs->ds); ConWriteFormated(L" | ");
+	ConWriteFormated(L"ES:     "); ArchPanicWriteHex((UInt8)regs->es); ConWriteFormated(L" | ");
+	ConWriteFormated(L"FS:  "); ArchPanicWriteHex((UInt8)regs->fs); ConWriteFormated(L" |\r\n");
 	
-	ConWriteFormated("| GS:  "); ArchPanicWriteHex((UInt8)regs->gs); ConWriteFormated(" | ");
-	ConWriteFormated("SS:  "); ArchPanicWriteHex((UInt8)regs->ss); ConWriteFormated(" | ");
-	ConWriteFormated("                   | ");
-	ConWriteFormated("                |\r\n");
+	ConWriteFormated(L"| GS:  "); ArchPanicWriteHex((UInt8)regs->gs); ConWriteFormated(L" | ");
+	ConWriteFormated(L"SS:  "); ArchPanicWriteHex((UInt8)regs->ss); ConWriteFormated(L" | ");
+	ConWriteFormated(L"                   | ");
+	ConWriteFormated(L"                |\r\n");
 	
 	PanicInt(err, True);																						// Print the error code
 	DispRefresh();																								// Refresh the screen

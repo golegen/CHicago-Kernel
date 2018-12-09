@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on December 09 of 2018, at 11:03 BRT
+// Last edited on December 09 of 2018, at 18:32 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -17,7 +17,7 @@ Void KernelMain(Void) {
 	ArchInitDebug();																										// Init the architecture-dependent debugging method
 	DbgWriteFormated("[Kernel] Arch debugging initialized\r\n");
 	
-	DbgWriteFormated("[Kernel] CHicago %s (codename %s, for %s)\r\n", CHICAGO_VSTR, CHICAGO_CODENAME, CHICAGO_ARCH);		// Print the system version
+	DbgWriteFormated("[Kernel] CHicago %s (codename %s, for %s)\r\n", CHICAGO_VSTR_C, CHICAGO_CODENAME_C, CHICAGO_ARCH_C);	// Print the system version
 	
 	ArchInitFPU();																											// Init the architecture-dependent FPU (floating point unit)
 	DbgWriteFormated("[Kernel] Arch FPU initialized\r\n");
@@ -72,10 +72,10 @@ Void KernelMainLate(Void) {
 	DbgWriteFormated("[Kernel] Kernel initialized\r\n\r\n");
 	
 	ConClearScreen();																										// Clear the screen
-	ConWriteFormated("CHicago Operating System for %s\r\n", CHICAGO_ARCH);													// Print some system informations
-	ConWriteFormated("Codename '%s'\r\n", CHICAGO_CODENAME);
-	ConWriteFormated("%s\r\n\r\n", CHICAGO_VSTR);
+	ConWriteFormated(L"CHicago Operating System for %s\r\n", CHICAGO_ARCH);												// Print some system informations
+	ConWriteFormated(L"Codename '%s'\r\n", CHICAGO_CODENAME);
+	ConWriteFormated(L"%s\r\n\r\n", CHICAGO_VSTR);
 	
-	ShellRun();																												// Run the shell!
+	ShellRun();																												// Run the shell!a
 	ArchHalt();																												// Halt
 }

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 21:03 BRT
-// Last edited on November 17 of 2018, at 13:19 BRT
+// Last edited on December 09 of 2018, at 17:16 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -11,14 +11,14 @@
 #include <chicago/string.h>
 #include <chicago/virt.h>
 
-static PChar ExecGetName(PChar path) {
+static PWChar ExecGetName(PWChar path) {
 	if (path == Null) {																								// Sanity check
 		return Null;
 	}
 	
-	PChar last = Null;
-	PChar dup = StrDuplicate(path);
-	PChar tok = StrTokenize(dup, "\\");
+	PWChar last = Null;
+	PWChar dup = StrDuplicate(path);
+	PWChar tok = StrTokenize(dup, L"\\");
 	
 	while (tok != Null) {																							// Let's go!
 		if (last != Null) {																							// Free the old last?
@@ -32,7 +32,7 @@ static PChar ExecGetName(PChar path) {
 			return Null;
 		}
 		
-		tok = StrTokenize(Null, "\\");																				// Tokenize next
+		tok = StrTokenize(Null, L"\\");																				// Tokenize next
 	}
 	
 	MemFree((UIntPtr)dup);
@@ -174,18 +174,18 @@ static Void ExecCreateProcessInt(Void) {
 	PsExitProcess();																								// And exit
 }
 
-PProcess ExecCreateProcess(PChar path) {
+PProcess ExecCreateProcess(PWChar path) {
 	if (path == Null) {																								// Check if wew have a valid path
 		return Null;
 	}
 	
-	PChar name = ExecGetName(path);																					// Try to extract our module name
+	PWChar name = ExecGetName(path);																				// Try to extract our module name
 	
 	if (name == Null) {
 		return Null;																								// Failed
 	}
 	
-	PChar pathh = StrDuplicate(path);																				// Let's duplicate the path
+	PWChar pathh = StrDuplicate(path);																				// Let's duplicate the path
 	
 	if (pathh == Null) {
 		MemFree((UIntPtr)name);

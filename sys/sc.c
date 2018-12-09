@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 01:14 BRT
-// Last edited on November 17 of 2018, at 13:03 BRT
+// Last edited on December 09 of 2018, at 19:06 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/mm.h>
@@ -184,7 +184,7 @@ Void ScPsForceSwitch(Void) {
 	PsSwitchTask(Null);																																		// Just redirect
 }
 
-IntPtr ScFsOpenFile(PChar path) {
+IntPtr ScFsOpenFile(PWChar path) {
 	if (!ScCheckPointer(path)) {																															// Check if the pointer is inside of the userspace
 		return -1;
 	}
@@ -246,7 +246,7 @@ Boolean ScFsWriteFile(IntPtr file, UIntPtr len, PUInt8 buf) {
 	}
 }
 
-Boolean ScFsMountFile(PChar path, PChar file, PChar type) {
+Boolean ScFsMountFile(PWChar path, PWChar file, PWChar type) {
 	if ((!ScCheckPointer(path)) || (!ScCheckPointer(file)) || (!ScCheckPointer(type))) {																	// Sanity checks
 		return False;	
 	} else {
@@ -254,7 +254,7 @@ Boolean ScFsMountFile(PChar path, PChar file, PChar type) {
 	}
 }
 
-Boolean ScFsUmountFile(PChar path) {
+Boolean ScFsUmountFile(PWChar path) {
 	if (!ScCheckPointer(path)) {																															// Sanity checks
 		return False;
 	} else {
@@ -262,24 +262,24 @@ Boolean ScFsUmountFile(PChar path) {
 	}
 }
 
-Boolean ScFsReadDirectoryEntry(IntPtr dir, UIntPtr entry, PChar out) {
+Boolean ScFsReadDirectoryEntry(IntPtr dir, UIntPtr entry, PWChar out) {
 	if ((dir >= PsCurrentProcess->last_fid) || (!ScCheckPointer(out))) {																					// Sanity checks
 		return False;
 	}
 	
-	PChar name = FsReadDirectoryEntry(((PProcessFile)(ListGet(PsCurrentProcess->files, dir)))->file, entry);												// Use the internal function
+	PWChar name = FsReadDirectoryEntry(((PProcessFile)(ListGet(PsCurrentProcess->files, dir)))->file, entry);												// Use the internal function
 	
 	if (name == Null) {
 		return False;																																		// Failed (probably this entry doesn't exists)
 	}
 	
-	StrCopyMemory(out, name, StrGetLength(name) + 1);																										// Copy the out pointer to the userspace
+	StrCopyMemory(out, name, (StrGetLength(name) + 1) * 4);																									// Copy the out pointer to the userspace
 	MemFree((UIntPtr)name);																																	// Free the out pointer
 	
 	return True;
 }
 
-IntPtr ScFsFindInDirectory(IntPtr dir, PChar name) {
+IntPtr ScFsFindInDirectory(IntPtr dir, PWChar name) {
 	if ((dir >= PsCurrentProcess->last_fid) || (!ScCheckPointer(name))) {																					// Sanity checks
 		return -1;
 	}
@@ -293,7 +293,7 @@ IntPtr ScFsFindInDirectory(IntPtr dir, PChar name) {
 	return ScAppendProcessFile(file);																														// Append the file to the process file list
 }
 
-Boolean ScFsCreateFile(IntPtr dir, PChar name, UIntPtr flags) {
+Boolean ScFsCreateFile(IntPtr dir, PWChar name, UIntPtr flags) {
 	if ((dir >= PsCurrentProcess->last_fid) || (!ScCheckPointer(name))) {																					// Sanity checks
 		return False;
 	} else {

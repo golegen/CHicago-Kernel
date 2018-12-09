@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 23:40 BRT
-// Last edited on November 15 of 2018, at 16:00 BRT
+// Last edited on December 09 of 2018, at 18:17 BRT
 
 #include <chicago/arch/ide.h>
 #include <chicago/arch/idt.h>
@@ -17,8 +17,8 @@ IDEDevice IDEDevices[4];
 UInt8 IDEBuffer[512] = { 0 };
 Volatile Boolean IDEIRQInvoked = False;
 
-PChar IDEHardDiskString = "HardDiskX";
-PChar IDECDROMString = "CdRomX";
+PWChar IDEHardDiskString = L"HardDiskX";
+PWChar IDECDROMString = L"CdRomX";
 
 Void IDEHandler(PRegisters regs) {
 	(Void)regs;
@@ -30,11 +30,11 @@ Void IDEWaitIRQ(Void) {
 	IDEIRQInvoked = False;
 }
 
-PChar IDEGetHardDiskString(Void) {
+PWChar IDEGetHardDiskString(Void) {
 	return IDEHardDiskString;
 }
 
-PChar IDEGetCDROMString(Void) {
+PWChar IDEGetCDROMString(Void) {
 	return IDECDROMString;
 }
 
@@ -541,7 +541,7 @@ Void IDEInit(Void) {
 	for (UInt32 i = 0, hdc = 0, cdc = 0; i < 2; i++) {															// And let's add them (the valid ones) to the device list!
 		for (UInt32 j = 0; j < 2; j++) {
 			if (IDEDevices[(i * 2) + j].valid) {																// Valid?
-				PChar name = Null;																				// Yes, let's allocate memory for the name
+				PWChar name = Null;																				// Yes, let's allocate memory for the name
 				PVoid devbd = (PVoid)((i << 8) | j);
 				
 				if (IDEDevices[(i * 2) + j].atapi) {															// ATAPI?
@@ -552,7 +552,7 @@ Void IDEInit(Void) {
 						goto next;
 					}
 					
-					name[5] = (Char)(cdc++ + '0');																// And set the num
+					name[5] = (WChar)(cdc++ + '0');																// And set the num
 				} else {
 					name = StrDuplicate(IDEHardDiskString);														// No, so duplicate the HardDiskX string
 					
@@ -561,7 +561,7 @@ Void IDEInit(Void) {
 						goto next;
 					}
 					
-					name[8] = (Char)(hdc++ + '0');																// And set the num
+					name[8] = (WChar)(hdc++ + '0');																// And set the num
 				}
 				
 				if (!FsAddDevice(name, devbd, IDEDeviceRead, IDEDeviceWrite, IDEDeviceControl)) {				// At end try to add us to the device list!

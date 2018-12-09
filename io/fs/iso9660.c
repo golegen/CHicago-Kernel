@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 17 of 2018, at 16:10 BRT
-// Last edited on November 16 of 2018, at 01:09 BRT
+// Last edited on December 09 of 2018, at 17:40 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/file.h>
@@ -52,7 +52,7 @@ Boolean Iso9660OpenFile(PFsNode node) {
 Void Iso9660CloseFile(PFsNode node) {
 	if (node == Null) {																								// Null pointer?
 		return;																										// Yes
-	} else if (StrCompare(node->name, "\\")) {																		// Root directory?
+	} else if (StrCompare(node->name, L"\\")) {																		// Root directory?
 		return;																										// Yes, don't free it, it's important for us (only the umount function can free it)
 	}
 	
@@ -61,7 +61,7 @@ Void Iso9660CloseFile(PFsNode node) {
 	MemFree((UIntPtr)node);
 }
 
-PChar Iso9660ReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
+PWChar Iso9660ReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 	if (dir == Null) {																								// I already did this comment (null pointer check) so many times... if you want, take a look in the other functions
 		return Null;
 	} else if ((dir->priv == Null) || (dir->inode == 0)) {
@@ -69,9 +69,9 @@ PChar Iso9660ReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 	} else if ((dir->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {															// Trying to read an directory entry using an file... why?
 		return Null;
 	} else if (entry == 0) {																						// Current directory?
-		return StrDuplicate(".");
+		return StrDuplicate(L".");
 	} else if (entry == 1) {																						// Parent directory?
-		return StrDuplicate("..");
+		return StrDuplicate(L"..");
 	}
 	
 	PFsNode dev = dir->priv;																						// Get our device and make sure that it's valid
@@ -118,12 +118,12 @@ PChar Iso9660ReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 		
 		if ((dent->flags & 0x01) != 0x01) {																			// Hidden file/directory?
 			if (idx == entry) {																						// It's an normal, visible, file/directory! Is the one that we want?
-				PChar ret = Null;																					// YES!
+				PWChar ret = Null;																					// YES!
 				
 				if (dent->name[dent->name_length - 2] == ';' && dent->name[dent->name_length - 1] == '1') {			// Let's alloc space for the name (and for fixing it)
-					ret = (PChar)MemAllocate(dent->name_length - 1);
+					ret = (PWChar)MemAllocate(dent->name_length - 2);
 				} else {
-					ret = (PChar)MemAllocate(dent->name_length + 1);
+					ret = (PWChar)MemAllocate(dent->name_length + 2);
 				}
 				
 				if (ret == Null) {																					// Failed? (When MemAllocate fails, we get a very big Null)
@@ -132,10 +132,10 @@ PChar Iso9660ReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 				}
 				
 				if (dent->name[dent->name_length - 2] == ';' && dent->name[dent->name_length - 1] == '1') {			// Fix the name?
-					StrCopyMemory(ret, dent->name, dent->name_length - 2);											// Yes
+					StrUnicodeFromC(ret, (PChar)dent->name, dent->name_length - 2);									// Yes
 					ret[dent->name_length - 2] = '\0';
 				} else {
-					StrCopyMemory(ret, dent->name, dent->name_length);												// No, so we only need to put the 0 (NUL) at the end of the string!
+					StrUnicodeFromC(ret, (PChar)dent->name, dent->name_length);										// No, so we only need to put the 0 (NUL) at the end of the string!
 					ret[dent->name_length] = '\0';
 				}
 				
@@ -155,7 +155,7 @@ PChar Iso9660ReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 	return Null;
 }
 
-PFsNode Iso9660FindInDirectory(PFsNode dir, PChar name) {
+PFsNode Iso9660FindInDirectory(PFsNode dir, PWChar name) {
 	if ((dir == Null) || (name == Null)) {																			// The first part of this function IS EXACTLY EQUAL TO THE first part of ReadDirectoryEntry, if you want, take a look at it
 		return Null;
 	} else if ((dir->priv == Null) || (dir->inode == 0)) {
@@ -205,12 +205,12 @@ PFsNode Iso9660FindInDirectory(PFsNode dir, PChar name) {
 		}
 		
 		if ((dent->flags & 0x01) != 0x01) {																			// Hidden file/directory?
-			PChar dename = Null;																					// It's an normal, visible, file/directory! Let's discover if it's the one that we want
+			PWChar dename = Null;																					// It's an normal, visible, file/directory! Let's discover if it's the one that we want
 			
 			if (dent->name[dent->name_length - 2] == ';' && dent->name[dent->name_length - 1] == '1') {				// Let's do the same fix that we did in the ReadDirectoryEntry function
-				dename = (PChar)MemAllocate(dent->name_length - 1);
+				dename = (PWChar)MemAllocate(dent->name_length - 2);
 			} else {
-				dename = (PChar)MemAllocate(dent->name_length + 1);
+				dename = (PWChar)MemAllocate(dent->name_length + 2);
 			}
 			
 			if (dename == Null) {
@@ -219,12 +219,12 @@ PFsNode Iso9660FindInDirectory(PFsNode dir, PChar name) {
 			}
 			
 			if (dent->name[dent->name_length - 2] == ';' && dent->name[dent->name_length - 1] == '1') {
-				StrCopyMemory(dename, dent->name, dent->name_length - 2);
-				dename[dent->name_length - 2] = '\0';
-			} else {
-				StrCopyMemory(dename, dent->name, dent->name_length);
-				dename[dent->name_length] = '\0';
-			}
+					StrUnicodeFromC(dename, (PChar)dent->name, dent->name_length - 2);
+					dename[dent->name_length - 2] = '\0';
+				} else {
+					StrUnicodeFromC(dename, (PChar)dent->name, dent->name_length);
+					dename[dent->name_length] = '\0';
+				}
 			
 			if (StrGetLength(dename) == StrGetLength(name)) {														// Same length?
 				if (StrCompare(dename, name)) {																		// YES! It's the entry that we want?
@@ -321,7 +321,7 @@ Boolean Iso9660Probe(PFsNode file) {
 	return False;
 }
 
-PFsMountPoint Iso9660Mount(PFsNode file, PChar path) {
+PFsMountPoint Iso9660Mount(PFsNode file, PWChar path) {
 	if ((file == Null) || (path == Null)) {
 		return False;
 	} else if ((file->flags & FS_FLAG_FILE) != FS_FLAG_FILE) {
@@ -379,7 +379,7 @@ PFsMountPoint Iso9660Mount(PFsNode file, PChar path) {
 		return Null;
 	}
 	
-	mp->type = StrDuplicate("Iso9660");																				// And the type string
+	mp->type = StrDuplicate(L"Iso9660");																			// And the type string
 	
 	if (mp->type == Null) {
 		MemFree((UIntPtr)mp->path);
@@ -400,7 +400,7 @@ PFsMountPoint Iso9660Mount(PFsNode file, PChar path) {
 		return Null;
 	}
 	
-	mp->root->name = StrDuplicate("\\");																			// Duplicate the name
+	mp->root->name = StrDuplicate(L"\\");																			// Duplicate the name
 	
 	if (mp->root->name == Null) {
 		MemFree((UIntPtr)mp->root);
@@ -438,7 +438,7 @@ Boolean Iso9660Umount(PFsMountPoint mp) {
 		return False;
 	} else if (mp->root->inode == 0) {
 		return False;
-	} else if (!StrCompare(mp->type, "Iso9660")) {
+	} else if (!StrCompare(mp->type, L"Iso9660")) {
 		return False;
 	}
 	
@@ -449,7 +449,7 @@ Boolean Iso9660Umount(PFsMountPoint mp) {
 }
 
 Void Iso9660Init(Void) {
-	PChar name = StrDuplicate("Iso9660");																			// Let's get our type string
+	PWChar name = StrDuplicate(L"Iso9660");																			// Let's get our type string
 	
 	if (name == Null) {
 		return;

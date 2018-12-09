@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 22:35 BRT
-// Last edited on December 07 of 2018, at 10:48 BRT
+// Last edited on December 09 of 2018, at 18:15 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -11,7 +11,7 @@
 #include <chicago/string.h>
 
 PList FsDeviceList = Null;
-PChar FsBootDevice = Null;
+PWChar FsBootDevice = Null;
 
 Boolean FsReadDevice(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 	if (dev->read != Null) {													// We can call the device's function?
@@ -37,7 +37,7 @@ Boolean FsControlDevice(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf) {
 	}
 }
 
-Boolean FsAddDevice(PChar name, PVoid priv, Boolean (*read)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*write)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*control)(PDevice, UIntPtr, PUInt8, PUInt8)) {
+Boolean FsAddDevice(PWChar name, PVoid priv, Boolean (*read)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*write)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*control)(PDevice, UIntPtr, PUInt8, PUInt8)) {
 	if (FsDeviceList == Null) {													// Device list was initialized?
 		return False;															// No...
 	}
@@ -62,7 +62,7 @@ Boolean FsAddDevice(PChar name, PVoid priv, Boolean (*read)(PDevice, UIntPtr, UI
 	return True;
 }
 
-Boolean FsRemoveDevice(PChar name) {
+Boolean FsRemoveDevice(PWChar name) {
 	if (FsDeviceList == Null) {													// Device list was initialized?
 		return False;															// No...
 	}
@@ -99,13 +99,13 @@ Boolean FsRemoveDevice(PChar name) {
 	return True;																// AND RETURN TRUE!
 }
 
-PDevice FsGetDevice(PChar name) {
+PDevice FsGetDevice(PWChar name) {
 	if (FsDeviceList == Null) {													// Device list was initialized?
 		return Null;															// No...
 	}
 	
 	ListForeach(FsDeviceList, i) {												// Let's do an for in each (foreach) list entry
-		PChar dname = ((PDevice)(i->data))->name;								// Save the entry name
+		PWChar dname = ((PDevice)(i->data))->name;								// Save the entry name
 		
 		if (StrGetLength(dname) != StrGetLength(name)) {						// Same length?
 			continue;															// No, so we don't even need to compare this entry
@@ -127,7 +127,7 @@ PDevice FsGetDeviceByID(UIntPtr id) {
 	return (PDevice)ListGet(FsDeviceList, id);
 }
 
-UIntPtr FsGetDeviceID(PChar name) {
+UIntPtr FsGetDeviceID(PWChar name) {
 	if (FsDeviceList == Null) {
 		return 0;
 	}
@@ -135,7 +135,7 @@ UIntPtr FsGetDeviceID(PChar name) {
 	UIntPtr idx = 0;
 	
 	ListForeach(FsDeviceList, i) {
-		PChar dname = ((PDevice)(i->data))->name;
+		PWChar dname = ((PDevice)(i->data))->name;
 		
 		if (StrGetLength(dname) != StrGetLength(name)) {
 			idx++;
@@ -150,13 +150,13 @@ UIntPtr FsGetDeviceID(PChar name) {
 	return (UIntPtr)-1;
 }
 
-Void FsSetBootDevice(PChar name) {
+Void FsSetBootDevice(PWChar name) {
 	if (FsGetDevice(name) != Null) {												// Device with this name exists?
 		FsBootDevice = name;														// Yes! So set it as boot device (just like the user asked)
 	}
 }
 
-PChar FsGetBootDevice(Void) {
+PWChar FsGetBootDevice(Void) {
 	return FsBootDevice;
 }
 

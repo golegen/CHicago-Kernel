@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 10 of 2018, at 21:18 BRT
-// Last edited on November 16 of 2018, at 16:10 BRT
+// Last edited on December 09 of 2018, at 19:06 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/chexec.h>
@@ -11,14 +11,14 @@
 #include <chicago/process.h>
 #include <chicago/string.h>
 
-static PFsNode ExecFindFile(PChar path) {
+static PFsNode ExecFindFile(PWChar path) {
 	if (path == Null) {																											// Sanity check
 		return Null;
 	} else if (path[0] == '\\') {																								// Non-relative path?
 		return FsOpenFile(path);																								// Yes :)
 	}
 	
-	PChar full = FsJoinPath("\\System\\Libraries", path);																		// Let's search on \System\Libraries
+	PWChar full = FsJoinPath(L"\\System\\Libraries", path);																		// Let's search on \System\Libraries
 	
 	if (full == Null) {																											// Failed to join the path?
 		return Null;																											// Yes :(
@@ -31,15 +31,15 @@ static PFsNode ExecFindFile(PChar path) {
 	return file;																												// Return
 }
 
-static PChar ExecGetName(PChar path, Boolean user) {
+static PWChar ExecGetName(PWChar path, Boolean user) {
 	if (path == Null) {																											// Sanity check
 		return Null;
 	} else if (path[0] != '\\') {																								// We really need to get the name?
 		return StrDuplicate(path);																								// Nope :)
 	}
 	
-	PChar last = Null;
-	PChar tok = StrTokenize(path, "\\");
+	PWChar last = Null;
+	PWChar tok = StrTokenize(path, L"\\");
 	
 	while (tok != Null) {																										// Let's go!
 		if (last != Null) {																										// Free the old last?
@@ -52,7 +52,7 @@ static PChar ExecGetName(PChar path, Boolean user) {
 			return Null;																										// Failed...
 		}
 		
-		tok = StrTokenize(Null, "\\");																							// Tokenize next
+		tok = StrTokenize(Null, L"\\");																							// Tokenize next
 	}
 	
 	if (last == Null) {
@@ -60,7 +60,7 @@ static PChar ExecGetName(PChar path, Boolean user) {
 	}
 	
 	if (user) {																													// Copy to userspace?
-		PChar ret = (PChar)MmAllocUserMemory(StrGetLength(last) + 1);															// Yes! Alloc the required space
+		PWChar ret = (PWChar)MmAllocUserMemory((StrGetLength(last) + 1) * 4);													// Yes! Alloc the required space
 		
 		if (ret == Null) {
 			MemFree((UIntPtr)last);																								// Failed...
@@ -76,21 +76,21 @@ static PChar ExecGetName(PChar path, Boolean user) {
 	}
 }
 
-static PExecHandle ExecGetHandle(PChar path) {
+static PExecHandle ExecGetHandle(PWChar path) {
 	if ((path == Null) || (PsCurrentThread == Null) || (PsCurrentProcess == Null)) {											// Sanity checks
 		return Null;
 	} else if (PsCurrentProcess->handle_list == Null) {
 		return Null;	
 	}
 	
-	PChar name = ExecGetName(path, False);																						// Get the handle name
+	PWChar name = ExecGetName(path, False);																						// Get the handle name
 	
 	if (name == Null) {
 		return Null;																											// Failed...
 	}
 	
 	ListForeach(PsCurrentProcess->handle_list, i) {																				// Let's search!
-		PChar hname = ((PExecHandle)i->data)->name;
+		PWChar hname = ((PExecHandle)i->data)->name;
 		
 		if (StrGetLength(hname) != StrGetLength(name)) {																		// Same length?
 			continue;																											// No...
@@ -195,7 +195,7 @@ Boolean ExecFillSymbolTable(PList list, UIntPtr base, PExecHandle handle, PUInt8
 			return False;
 		}
 		
-		sm->name = (PChar)MmAllocUserMemory(sym->name_len);																		// Alloc space for the name
+		sm->name = (PWChar)MmAllocUserMemory(sym->name_len);																		// Alloc space for the name
 		
 		if (sm->name == Null) {
 			MmFreeUserMemory((UIntPtr)sm);																						// Failed...
@@ -349,7 +349,7 @@ static Boolean ExecLoadLibraryInt(PExecHandle handle, PUInt8 buf) {
 	return True;
 }
 
-PExecHandle ExecLoadLibrary(PChar path, Boolean global) {
+PExecHandle ExecLoadLibrary(PWChar path, Boolean global) {
 	if ((path == Null) || (PsCurrentThread == Null) || (PsCurrentProcess == Null)) {											// Sanity checks
 		return Null;
 	} else if ((PsCurrentProcess->handle_list == Null) || (PsCurrentProcess->global_handle_list == Null)) {						// Init the handle list (or the global handle list)?
@@ -377,7 +377,7 @@ PExecHandle ExecLoadLibrary(PChar path, Boolean global) {
 		return handle;
 	}
 	
-	PChar name = ExecGetName(path, True);																						// Get the handle name
+	PWChar name = ExecGetName(path, True);																						// Get the handle name
 	
 	if (name == Null) {
 		return Null;																											// Failed
@@ -519,7 +519,7 @@ Void ExecCloseLibrary(PExecHandle handle) {
 	MmFreeUserMemory((UIntPtr)handle);																							// And free the handle itself
 }
 
-UIntPtr ExecGetSymbol(PExecHandle handle, PChar name) {
+UIntPtr ExecGetSymbol(PExecHandle handle, PWChar name) {
 	if ((name == Null) || (PsCurrentThread == Null) || (PsCurrentProcess == Null)) {											// Sanity checks
 		return 0;
 	} else if (handle == Null) {																								// Search in the global handle list?

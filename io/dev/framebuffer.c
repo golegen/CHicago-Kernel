@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 18 of 2018, at 22:24 BRT
-// Last edited on November 10 of 2018, at 19:14 BRT
+// Last edited on December 09 of 2018, at 17:34 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -50,7 +50,7 @@ Boolean FrameBufferDeviceControl(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 o
 }
 
 Void FrameBufferDeviceInit(Void) {
-	if (!FsAddDevice("FrameBuffer", Null, FrameBufferDeviceRead, FrameBufferDeviceWrite, FrameBufferDeviceControl)) {		// Let's add ourself
+	if (!FsAddDevice(L"FrameBuffer", Null, FrameBufferDeviceRead, FrameBufferDeviceWrite, FrameBufferDeviceControl)) {		// Let's add ourself
 		DbgWriteFormated("PANIC! Failed to add the FrameBuffer device\r\n");												// Failed
 		Panic(PANIC_KERNEL_INIT_FAILED);
 	}

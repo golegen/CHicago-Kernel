@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 16 of 2018, at 18:28 BRT
-// Last edited on November 16 of 2018, at 01:46 BRT
+// Last edited on December 09 of 2018, at 19:18 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -13,32 +13,32 @@
 PList FsMountPointList = Null;
 PList FsTypeList = Null;
 
-PList FsTokenizePath(PChar path) {
+PList FsTokenizePath(PWChar path) {
 	if (path == Null) {																													// Path is Null?
 		return Null;																													// Yes...
 	} else if ((StrGetLength(path) == 0) || ((StrGetLength(path) == 1) && (path[0] == '\\'))) {											// Root directory?
 		return ListNew(True, False);																									// Yes, so just return an empty list
 	}
 	
-	PChar clone = StrDuplicate(path);
+	PWChar clone = StrDuplicate(path);
 	PList list = ListNew(True, False);																									// Create the tok list
 	
 	if (list == Null || clone == Null) {																								// Failed to alloc it?
 		return Null;																													// Yes, so we can't do anything :(
 	}
 	
-	PChar tok = StrTokenize(clone, "\\");																								// Let's tokenize it!
+	PWChar tok = StrTokenize(clone, L"\\");																								// Let's tokenize it!
 	
 	while (tok != Null) {
-		if ((StrGetLength(tok) == 2) && (StrCompare(tok, ".."))) {																		// Parent directory (..)?
+		if ((StrGetLength(tok) == 2) && (StrCompare(tok, L".."))) {																		// Parent directory (..)?
 			if (list->length > 0) {																										// We're in the root directory?
 				MemFree((UIntPtr)(ListRemove(list, list->length - 1)));																	// No, so remove the last entry (current one)
 			}
-		} else if (!((StrGetLength(tok) == 1) && (StrCompare(tok, ".")))) {																// Current directory (.)?
+		} else if (!((StrGetLength(tok) == 1) && (StrCompare(tok, L".")))) {															// Current directory (.)?
 			ListAdd(list, StrDuplicate(tok));																							// No, so add it to the list
 		}
 		
-		tok = StrTokenize(Null, "\\");
+		tok = StrTokenize(Null, L"\\");
 	}
 	
 	MemFree((UIntPtr)clone);
@@ -46,7 +46,7 @@ PList FsTokenizePath(PChar path) {
 	return list;
 }
 
-PChar FsCanonicalizePath(PChar path) {
+PWChar FsCanonicalizePath(PWChar path) {
 	if (path == Null) {																													// Path is Null?
 		return Null;																													// YES
 	} else if (path[0] != '\\') {																										// Absolute path?
@@ -59,31 +59,31 @@ PChar FsCanonicalizePath(PChar path) {
 		return Null;																													// :(
 	}
 	
-	PChar tok = StrTokenize(path, "\\");																								// First, let's tokenize it (if you want, take a look in the FsTokenizePath function)
-	PChar final = Null;
-	PChar foff = Null;
+	PWChar tok = StrTokenize(path, L"\\");																								// First, let's tokenize it (if you want, take a look in the FsTokenizePath function)
+	PWChar final = Null;
+	PWChar foff = Null;
 	UIntPtr fsize = 0;
 	
 	while (tok != Null) {
-		if ((StrGetLength(tok) == 2) && (StrCompare(tok, ".."))) {
+		if ((StrGetLength(tok) == 2) && (StrCompare(tok, L".."))) {
 			if (list->length > 0) {
 				MemFree((UIntPtr)(ListRemove(list, list->length - 1)));
 			}
-		} else if (!((StrGetLength(tok) == 1) && (StrCompare(tok, ".")))) {
+		} else if (!((StrGetLength(tok) == 1) && (StrCompare(tok, L".")))) {
 			ListAdd(list, StrDuplicate(tok));
 		}
 		
-		tok = StrTokenize(Null, "\\");
+		tok = StrTokenize(Null, L"\\");
 	}
 	
 	if (list->length == 0) {																											// Root directory?
-		final = StrDuplicate("\\");																										// Yes
+		final = StrDuplicate(L"\\");																									// Yes
 	} else {
 		ListForeach(list, i) {																											// No, so let's get the final size
-			fsize += StrGetLength((PChar)(i->data)) + 2;
+			fsize += (StrGetLength((PWChar)(i->data)) + 2) * 4;
 		}
 		
-		final = foff = (PChar)MemAllocate(fsize);																						// Alloc space
+		final = foff = (PWChar)MemAllocate(fsize);																						// Alloc space
 		
 		if (final == Null) {																											// Failed?
 			ListFree(list);																												// Yes, so free everything and return
@@ -91,9 +91,9 @@ PChar FsCanonicalizePath(PChar path) {
 		}
 		
 		ListForeach(list, i) {																											// Now let's copy everything to the ret string!
-			StrCopy(foff++, "\\");
-			StrCopy(foff, (PChar)(i->data));
-			foff += StrGetLength((PChar)(i->data));
+			StrCopy(foff++, L"\\");
+			StrCopy(foff, (PWChar)(i->data));
+			foff += StrGetLength((PWChar)(i->data));
 		}
 	}
 	
@@ -102,7 +102,7 @@ PChar FsCanonicalizePath(PChar path) {
 	return final;																														// And return!
 }
 
-PChar FsJoinPath(PChar src, PChar incr) {
+PWChar FsJoinPath(PWChar src, PWChar incr) {
 	if ((src == Null) && (incr == Null)) {																								// We need at least one of them!
 		return Null;
 	} else if ((src == Null) && (incr != Null)) {																						// We only have src?
@@ -113,15 +113,15 @@ PChar FsJoinPath(PChar src, PChar incr) {
 		return Null;																													// No
 	}
 	
-	UIntPtr psize = StrGetLength(src) + StrGetLength(incr) + 2;																			// Let's calculate the final string size
-	PChar path = Null;
-	PChar poff = Null;
+	UIntPtr psize = (StrGetLength(src) + StrGetLength(incr) + 2) * 4;																	// Let's calculate the final string size
+	PWChar path = Null;
+	PWChar poff = Null;
 	
-	if ((incr[0] != '\\') && (src[StrGetLength(src)] != '\\')) {
-		psize++;
+	if ((incr[0] != '\\') && (src[StrGetLength(src) - 2] != '\\')) {
+		psize += 4;
 	}
 	
-	path = poff = (PChar)MemAllocate(psize);																							// Allocate some space
+	path = poff = (PWChar)MemAllocate(psize);																							// Allocate some space
 	
 	if (path == Null) {																													// Failed?
 		return Null;																													// Yes
@@ -136,25 +136,25 @@ PChar FsJoinPath(PChar src, PChar incr) {
 	
 	StrCopy(poff, incr);																												// Copy the incr
 	
-	PChar final = FsCanonicalizePath(path);																								// Canonicalize
+	PWChar final = FsCanonicalizePath(path);																							// Canonicalize
 	
 	MemFree((UIntPtr)path);																												// Free our temp path
 	
 	return final;																														// And return
 }
 
-PChar FsGetRandomPath(PChar prefix) {
-	PChar name = (PChar)MemAllocate(9);																									// Random names are 8-characters long
+PWChar FsGetRandomPath(PWChar prefix) {
+	PWChar name = (PWChar)MemAllocate(9);																									// Random names are 8-characters long
 	
 	while (name != Null) {																												// Let's do it!
 		for (UIntPtr i = 0; i < 8; i++) {																								// Generate 8 "random" hex numbers
-			name[i] = "0123456789ABCDEF"[RandGenerate() % 16];
+			name[i] = L"0123456789ABCDEF"[RandGenerate() % 16];
 			RandSetSeed(RandGenerate());
 		}
 		
 		name[8] = 0;																													// End with zero
 		
-		PChar path = FsJoinPath(prefix, name);																							// Join the prefix and the random name
+		PWChar path = FsJoinPath(prefix, name);																							// Join the prefix and the random name
 		
 		if (path != Null) {																												// Failed?
 			PFsNode file = FsOpenFile(path);																							// No, let's check if it already exists
@@ -206,7 +206,7 @@ Boolean FsOpenFileInt(PFsNode node) {
 	}
 }
 
-PFsNode FsOpenFile(PChar path) {
+PFsNode FsOpenFile(PWChar path) {
 	if ((FsMountPointList == Null) || (path == Null)) {																					// Some null pointer checks
 		return Null;
 	} else if (FsMountPointList->length == 0) {																							// Don't even lose time trying to open some file if our mount point list is empty
@@ -215,7 +215,7 @@ PFsNode FsOpenFile(PChar path) {
 		return Null;
 	}
 	
-	PChar rpath = Null;
+	PWChar rpath = Null;
 	PFsMountPoint mp = FsGetMountPoint(path, &rpath);																					// Find the mount point
 	
 	if ((mp == Null) || (rpath == Null)) {																								// Failed?
@@ -235,7 +235,7 @@ PFsNode FsOpenFile(PChar path) {
 	}
 	
 	ListForeach(parts, i) {
-		cur = FsFindInDirectory(cur, (PChar)(i->data));																					// Let's try to find the file/folder in the folder (the file is i->data and the folder is cur)
+		cur = FsFindInDirectory(cur, (PWChar)(i->data));																					// Let's try to find the file/folder in the folder (the file is i->data and the folder is cur)
 		
 		if (cur == Null) {
 			ListFree(parts);																											// Failed
@@ -261,7 +261,7 @@ Void FsCloseFile(PFsNode node) {
 	}
 }
 
-Boolean FsMountFile(PChar path, PChar file, PChar type) {
+Boolean FsMountFile(PWChar path, PWChar file, PWChar type) {
 	if ((FsMountPointList == Null) || (FsTypeList == Null)) {																			// Like in all the functions, first do some null pointer checks
 		return False;
 	} else if ((path == Null) || (file == Null)) {																						// Same as above
@@ -279,11 +279,11 @@ Boolean FsMountFile(PChar path, PChar file, PChar type) {
 	
 	PFsNode dest = FsOpenFile(path);																									// Try to open the destination file
 	
-	if ((dest == Null) && (!StrCompare(path, "\\"))) {																					// Failed (and we aren't trying to mount the root directory)?
+	if ((dest == Null) && (!StrCompare(path, L"\\"))) {																					// Failed (and we aren't trying to mount the root directory)?
 		FsCloseFile(src);																												// Yes, close the src file
 		return False;																													// And return
 	} else {
-		if (!StrCompare(path, "\\")) {																									// Trying to mount the root directory?
+		if (!StrCompare(path, L"\\")) {																									// Trying to mount the root directory?
 			if ((dest->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {																			// No, so we need to check if the dest is an directory!
 				FsCloseFile(dest);																										// Isn't, so close it, close src and return
 				FsCloseFile(src);
@@ -350,17 +350,17 @@ Boolean FsMountFile(PChar path, PChar file, PChar type) {
 	}
 }
 
-Boolean FsUmountFile(PChar path) {
+Boolean FsUmountFile(PWChar path) {
 	if ((FsMountPointList == Null) || (path == Null)) {																					// Again, null pointer checks
 		return False;
 	}
 	
-	PChar rpath = Null;
+	PWChar rpath = Null;
 	PFsMountPoint mp = FsGetMountPoint(path, &rpath);																					// Let's get the mount point info/struct
 	
 	if (mp == Null) {																													// Failed...
 		return False;
-	} else if (!StrCompare(rpath, "")) {
+	} else if (!StrCompare(rpath, L"")) {
 		return False;																													// You need to pass the absolute path to the mount point to this function!
 	}
 	
@@ -377,7 +377,7 @@ Boolean FsUmountFile(PChar path) {
 	return FsRemoveMountPoint(path);																									// The FsRemoveMountPoint will do all the job now!
 }
 
-PChar FsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
+PWChar FsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 	if (dir == Null) {
 		return Null;
 	} else if ((dir->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {																				// Directory-only function!
@@ -389,7 +389,7 @@ PChar FsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 	}
 }
 
-PFsNode FsFindInDirectory(PFsNode dir, PChar name) {
+PFsNode FsFindInDirectory(PFsNode dir, PWChar name) {
 	if ((dir == Null) || (name == Null)) {
 		return Null;
 	} else if ((dir->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {																				// Directory-only function!
@@ -401,7 +401,7 @@ PFsNode FsFindInDirectory(PFsNode dir, PChar name) {
 	}
 }
 
-Boolean FsCreateFile(PFsNode dir, PChar name, UIntPtr flags) {
+Boolean FsCreateFile(PFsNode dir, PWChar name, UIntPtr flags) {
 	if ((dir == Null) || (name == Null)) {
 		return False;
 	} else if ((dir->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {																				// Directory-only function!
@@ -434,7 +434,7 @@ Boolean FsControlFile(PFsNode file, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf) {
 	}
 }
 
-PFsMountPoint FsGetMountPoint(PChar path, PChar *outp) {
+PFsMountPoint FsGetMountPoint(PWChar path, PWChar *outp) {
 	if (FsMountPointList == Null) {																										// The mount point list is initialized?
 		if (outp != Null) {																												// Nope, so let's set the outp (out pointer) to Null and return Null
 			*outp = Null;
@@ -455,17 +455,17 @@ PFsMountPoint FsGetMountPoint(PChar path, PChar *outp) {
 		return Null;
 	}
 	
-	PChar dup = StrDuplicate(path);																										// Let's duplicate the path, as we're going to change the string
+	PWChar dup = StrDuplicate(path);																									// Let's duplicate the path, as we're going to change the string
 	UIntPtr ncurr = StrGetLength(dup) - 1;
 	
-	if (!StrCompare(dup, "\\")) {																										// We're trying to find the root mount point?
+	if (!StrCompare(dup, L"\\")) {																										// We're trying to find the root mount point?
 		while (dup[ncurr] == '\\') {																									// No
 			dup[ncurr--] = '\0';
 		}
 	}
 	
 	while (dup[0] != '\0') {
-		Boolean root = StrCompare(dup, "\\");
+		Boolean root = StrCompare(dup, L"\\");
 		
 		ListForeach(FsMountPointList, i) {
 			PFsMountPoint mp = (PFsMountPoint)(i->data);
@@ -491,7 +491,7 @@ PFsMountPoint FsGetMountPoint(PChar path, PChar *outp) {
 			dup[ncurr--] = '\0';
 		}
 		
-		if (!(StrCompare(dup, "\\") && !root)) {
+		if (!(StrCompare(dup, L"\\") && !root)) {
 			dup[ncurr--] = '\0';
 		}
 	}
@@ -505,7 +505,7 @@ PFsMountPoint FsGetMountPoint(PChar path, PChar *outp) {
 	return Null;																														// And return Null
 }
 
-PFsType FsGetType(PChar type) {
+PFsType FsGetType(PWChar type) {
 	if ((FsTypeList == Null) || (type == Null)) {																						// Null pointer checks
 		return Null;
 	} else if (FsTypeList->length == 0) {																								// Type list have any entry?
@@ -525,18 +525,18 @@ PFsType FsGetType(PChar type) {
 	return Null;																														// We haven't found it
 }
 
-Boolean FsAddMountPoint(PChar path, PChar type, PFsNode root) {
+Boolean FsAddMountPoint(PWChar path, PWChar type, PFsNode root) {
 	if ((FsMountPointList == Null) || (path == Null) || (type == Null) || (root == Null)) {												// Null pointer checks
 		return False;
 	}
 	
-	PChar rpath = Null;
+	PWChar rpath = Null;
 	FsGetMountPoint(path, &rpath);
 	UIntPtr len = StrGetLength(path);
 	 
-	if (path[len - 1] == '\\' && rpath != Null && !StrCompare(rpath, "")) {																// This mount point doesn't exist right?
+	if (path[len - 1] == '\\' && rpath != Null && !StrCompare(rpath, L"")) {															// This mount point doesn't exist right?
 		return False;																													// ...
-	} else if (path[len - 1] != '\\' && rpath != Null && StrCompare(path, "")) {														// Same check
+	} else if (path[len - 1] != '\\' && rpath != Null && StrCompare(path, L"")) {														// Same check
 		return False;
 	}
 	
@@ -558,20 +558,20 @@ Boolean FsAddMountPoint(PChar path, PChar type, PFsNode root) {
 	return True;
 }
 
-Boolean FsRemoveMountPoint(PChar path) {
+Boolean FsRemoveMountPoint(PWChar path) {
 	if ((FsMountPointList == Null) || (path == Null)) {																					// Null pointer(s)?
 		return False;																													// Yes
 	}
 	
-	PChar rpath = Null;
+	PWChar rpath = Null;
 	PFsMountPoint mp = FsGetMountPoint(path, &rpath);																					// Let's try to find the mount point
 	UIntPtr len = StrGetLength(path);
 	
 	if ((mp == Null) || (rpath == Null)) {																								// Found it?
 		return False;																													// No....
-	} else if (path[len - 1] == '\\' && !StrCompare(rpath, "")) {																		// The user tried to remove the mount point using the name of an file/folder that was inside of it?
+	} else if (path[len - 1] == '\\' && !StrCompare(rpath, L"")) {																		// The user tried to remove the mount point using the name of an file/folder that was inside of it?
 		return False;																													// Yes...
-	} else if (path[len - 1] != '\\' && StrCompare(rpath, "")) {																		// Same check
+	} else if (path[len - 1] != '\\' && StrCompare(rpath, L"")) {																		// Same check
 		return False;
 	}
 	
@@ -609,7 +609,7 @@ Boolean FsRemoveMountPoint(PChar path) {
 	return True;																														// And return True!
 }
 
-Boolean FsAddType(PChar name, Boolean (*probe)(PFsNode), PFsMountPoint (*mount)(PFsNode, PChar), Boolean (*umount)(PFsMountPoint)) {
+Boolean FsAddType(PWChar name, Boolean (*probe)(PFsNode), PFsMountPoint (*mount)(PFsNode, PWChar), Boolean (*umount)(PFsMountPoint)) {
 	if ((FsTypeList == Null) || (name == Null) || (probe == Null) || (mount == Null) || (umount == Null)) {								// Null pointer checks
 		return False;
 	} else if (FsGetType(name) != Null) {																								// This fs type doesn't exists... right?
@@ -635,7 +635,7 @@ Boolean FsAddType(PChar name, Boolean (*probe)(PFsNode), PFsMountPoint (*mount)(
 	return True;
 }
 
-Boolean FsRemoveType(PChar name) {
+Boolean FsRemoveType(PWChar name) {
 	if ((FsTypeList == Null) || (name == Null)) {																						// Null pointer(s)?
 		return False;																													// Yes
 	}
@@ -718,14 +718,14 @@ Void FsInit(Void) {
 	
 	FsInitTypes();																														// Init all the supported fs types
 	
-	PChar bdpath = FsJoinPath("\\Devices", FsGetBootDevice());																			// Let's mount the boot device
+	PWChar bdpath = FsJoinPath(L"\\Devices", FsGetBootDevice());																		// Let's mount the boot device
 	
 	if (bdpath == Null) {
 		DbgWriteFormated("PANIC! Couldn't mount the boot device\r\n");
 		Panic(PANIC_KERNEL_INIT_FAILED);
 	}
 	
-	if (!FsMountFile("\\", bdpath, Null)) {
+	if (!FsMountFile(L"\\", bdpath, Null)) {
 		DbgWriteFormated("PANIC! Couldn't mount the boot device\r\n");
 		Panic(PANIC_KERNEL_INIT_FAILED);
 	}

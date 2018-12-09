@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:59 BRT
-// Last edited on December 08 of 2018, at 10:49 BRT
+// Last edited on December 09 of 2018, at 17:55 BRT
 
 #define __CHICAGO_PROCESS__
 
@@ -48,7 +48,7 @@ PThread PsCreateThreadInt(UIntPtr entry, UIntPtr userstack, Boolean user) {
 	return th;
 }
 
-PProcess PsCreateProcessInt(PChar name, UIntPtr entry, UIntPtr dir) {
+PProcess PsCreateProcessInt(PWChar name, UIntPtr entry, UIntPtr dir) {
 	PProcess proc = (PProcess)MemAllocate(sizeof(Process));																						// Let's try to allocate the process struct!
 	
 	if (proc == Null) {
@@ -124,7 +124,7 @@ PThread PsCreateThread(UIntPtr entry, UIntPtr userstack, Boolean user) {
 	return PsCreateThreadInt(entry, userstack, user);																							// Use our PsCreateThreadInt function
 }
 
-PProcess PsCreateProcess(PChar name, UIntPtr entry) {
+PProcess PsCreateProcess(PWChar name, UIntPtr entry) {
 	return PsCreateProcessInt(name, entry, 0);																									// Use our PsCreateProcessInt function
 }
 
@@ -219,7 +219,7 @@ Void PsWaitProcess(UIntPtr id) {
 }
 
 Void PsLock(PLock lock) {
-	if ((lock == Null) || (PsCurrentProcess == Null)) {																							// Sanity checks
+	if ((lock == Null) || (PsCurrentThread == Null)) {																							// Sanity checks
 		return;
 	}
 	
@@ -231,7 +231,7 @@ Void PsLock(PLock lock) {
 }
 
 Void PsUnlock(PLock lock) {
-	if ((lock == Null) || (PsCurrentProcess == Null)) {																							// Sanity checks
+	if ((lock == Null) || (PsCurrentThread == Null)) {																							// Sanity checks
 		return;
 	}
 	
@@ -359,7 +359,7 @@ Void PsInit(Void) {
 		Panic(PANIC_KERNEL_INIT_FAILED);
 	}
 	
-	PProcess proc = PsCreateProcessInt("System", (UIntPtr)KernelMainLate, MmKernelDirectory);													// Try to create the system process
+	PProcess proc = PsCreateProcessInt(L"System", (UIntPtr)KernelMainLate, MmKernelDirectory);													// Try to create the system process
 	
 	if (proc == Null) {
 		DbgWriteFormated("PANIC! Failed to init tasking\r\n");

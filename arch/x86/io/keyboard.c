@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 12 of 2018, at 23:10 BRT
-// Last edited on December 09 of 2018, at 10:45 BRT
+// Last edited on December 09 of 2018, at 16:37 BRT
 
 #include <chicago/arch/idt.h>
 #include <chicago/arch/port.h>
@@ -66,16 +66,16 @@ static Void KeyboardHandler(PRegisters regs) {
 			}
 		} else if (ch == '\n') {																	// New line?
 			ConsoleDeviceWriteKeyboard(ch);															// Yes, convert the \n to \r\n
-			ConWriteFormated("\r\n");
+			ConWriteFormated(L"\r\n");
 		} else if ((ch != '\t') && (KbdCtrl && KbdShft)) {											// Control+Key (with shift)?
 			ConsoleDeviceWriteKeyboard(ch - 'A');													// Yes
-			ConWriteFormated("^%c", ch);
+			ConWriteFormated(L"^%c", ch);
 		} else if (ch != '\t' && KbdCtrl) {															// Control+Key (without shift)?
 			ConsoleDeviceWriteKeyboard(ch - 'a');													// Yes
-			ConWriteFormated("^%c", ch - 0x20);
+			ConWriteFormated(L"^%c", ch - 0x20);
 		} else {
 			ConsoleDeviceWriteKeyboard(ch);															// Normal character!
-			ConWriteFormated("%c", ch);
+			ConWriteFormated(L"%c", ch);
 		}
 	}
 }
