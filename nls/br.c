@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:27 BRT
-// Last edited on December 09 of 2018, at 20:31 BRT
+// Last edited on December 10 of 2018, at 16:31 BRT
 
 #include <chicago/types.h>
 
@@ -16,10 +16,23 @@ PWChar NlsMessagesBr[] = {
 	
 	L"Versão %d.%d.%d\r\n\r\n",
 	
+	L"Uso: %s [caminho]\r\n\r\n",
+	
+	L"Não foi possivel abrir o arquivo\r\n\r\n",
+	
+	L"Arquivo inexistente: '%s'\r\n\r\n",
+	
+	L"Não foi possivel mudar o diretório atual\r\n\r\n",
+	
+	L"Diretório inexistente: '%s'\r\n\r\n",
+	
+	L"cat   - Mostra o conteúdo de um arquivo\r\n"
+	L"cd    - Muda o diretório atual\r\n"
 	L"cls   - Limpa a tela\r\n"
 	L"echo  - Mostra os argumentos na tela\r\n"
 	L"help  - Mostra os comandos disponíveis\r\n"
 	L"lang  - Altera o idioma do sistema\r\n"
+	L"ls    - Lista o conteudo de um diretório\r\n"
 	L"panic - Força um error fatal\r\n"
 	L"ps    - Mostra todos os processos\r\n"
 	L"ver   - Mostra a versão do sistema\r\n\r\n",
@@ -27,6 +40,8 @@ PWChar NlsMessagesBr[] = {
 	L"Idiomas disponíveis: %s\r\n\r\n",
 	
 	L"Idioma inválido: '%s'\r\n\r\n",
+	
+	L"Não foi possível listar o diretório atual\r\n\r\n",
 	
 	L"<Sem Nome>",
 	

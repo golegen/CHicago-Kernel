@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:26 BRT
-// Last edited on December 09 of 2018, at 20:40 BRT
+// Last edited on December 10 of 2018, at 16:28 BRT
 
 #ifndef __CHICAGO_NLS_H__
 #define __CHICAGO_NLS_H__
@@ -16,12 +16,18 @@
 #define NLS_OS_NAME 0x02
 #define NLS_OS_CODENAME 0x03
 #define NLS_OS_VSTR 0x04
-#define NLS_SHELL_HELP 0x05
-#define NLS_SHELL_LANG_LIST 0x06
-#define NLS_SHELL_LANG_INVALID 0x07
-#define NLS_SHELL_PS_UNAMED 0x08
-#define NLS_SHELL_PS 0x09
-#define NLS_SHELL_INVALID 0x0A
+#define NLS_SHELL_USAGE1 0x05
+#define NLS_SHELL_CAT_ERR1 0x06
+#define NLS_SHELL_CAT_ERR2 0x07
+#define NLS_SHELL_CD_ERR1 0x08
+#define NLS_SHELL_CD_ERR2 0x09
+#define NLS_SHELL_HELP 0x0A
+#define NLS_SHELL_LANG_LIST 0x0B
+#define NLS_SHELL_LANG_INVALID 0x0C
+#define NLS_SHELL_LS_ERR 0x0D
+#define NLS_SHELL_PS_UNAMED 0x0E
+#define NLS_SHELL_PS 0x0F
+#define NLS_SHELL_INVALID 0x10
 
 PWChar NlsGetMessage(UIntPtr msg);
 PWChar NlsGetLanguages(Void);

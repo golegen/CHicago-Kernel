@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 16 of 2018, at 18:28 BRT
-// Last edited on December 09 of 2018, at 19:18 BRT
+// Last edited on December 10 of 2018, at 16:19 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -34,7 +34,7 @@ PList FsTokenizePath(PWChar path) {
 			if (list->length > 0) {																										// We're in the root directory?
 				MemFree((UIntPtr)(ListRemove(list, list->length - 1)));																	// No, so remove the last entry (current one)
 			}
-		} else if (!((StrGetLength(tok) == 1) && (StrCompare(tok, L".")))) {															// Current directory (.)?
+		} else if (!(((StrGetLength(tok) == 1) && (StrCompare(tok, L"."))) || StrGetLength(tok) == 0)) {								// Current directory (.)?
 			ListAdd(list, StrDuplicate(tok));																							// No, so add it to the list
 		}
 		
@@ -69,7 +69,7 @@ PWChar FsCanonicalizePath(PWChar path) {
 			if (list->length > 0) {
 				MemFree((UIntPtr)(ListRemove(list, list->length - 1)));
 			}
-		} else if (!((StrGetLength(tok) == 1) && (StrCompare(tok, L".")))) {
+		} else if (!(((StrGetLength(tok) == 1) && (StrCompare(tok, L"."))) || StrGetLength(tok) == 0)) {
 			ListAdd(list, StrDuplicate(tok));
 		}
 		
@@ -105,9 +105,9 @@ PWChar FsCanonicalizePath(PWChar path) {
 PWChar FsJoinPath(PWChar src, PWChar incr) {
 	if ((src == Null) && (incr == Null)) {																								// We need at least one of them!
 		return Null;
-	} else if ((src == Null) && (incr != Null)) {																						// We only have src?
+	} else if ((src != Null) && (incr == Null)) {																						// We only have src?
 		return FsCanonicalizePath(src);																									// Yes, so we can only canonicalize it
-	} else if ((src != Null) && (incr == Null)) {																						// Only incr?
+	} else if ((src == Null) && (incr != Null)) {																						// Only incr?
 		return FsCanonicalizePath(incr);																								// Yes, so we can only canonicalize it
 	} else if (src[0] != '\\') {																										// Absolute path?
 		return Null;																													// No
