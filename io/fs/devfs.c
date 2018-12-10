@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 16 of 2018, at 18:29 BRT
-// Last edited on December 09 of 2018, at 18:13 BRT
+// Last edited on December 10 of 2018, at 17:28 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -68,8 +68,12 @@ PWChar DevFsReadDirectoryEntry(PFsNode dir, UIntPtr entry) {
 		return Null;																			// Yes, so we can't continue
 	} else if ((dir->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {										// We're trying to do ReadDirectoryEntry in an... File?
 		return Null;																			// Yes (Why?)
+	} else if (entry == 0) {																	// Current directory?
+		return StrDuplicate(L".");
+	} else if (entry == 1) {																	// Parent directory?
+		return StrDuplicate(L"..");
 	} else {
-		PDevice dev = FsGetDeviceByID(entry);													// Get the device by ID (using the entry)
+		PDevice dev = FsGetDeviceByID(entry - 2);												// Get the device by ID (using the entry)
 		
 		if (dev == Null) {																		// Found?
 			return Null;																		// Nope

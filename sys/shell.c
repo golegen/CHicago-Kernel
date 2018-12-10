@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 10 of 2018, at 16:51 BRT
+// Last edited on December 10 of 2018, at 18:05 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -89,9 +89,11 @@ static Void ShellMain(Void) {
 			if (buf == Null) {
 				ConWriteFormated(NlsGetMessage(NLS_SHELL_CAT_ERR2), argv[1]);																			// ...
 				FsCloseFile(file);
+				continue;
 			} else if (!FsReadFile(file, 0, file->length, buf)) {																						// Read!
 				ConWriteFormated(NlsGetMessage(NLS_SHELL_CAT_ERR2), argv[1]);																			// ...
 				FsCloseFile(file);
+				continue;
 			}
 			
 			ConSetRefresh(False);																														// Disable screen refresh
@@ -100,8 +102,13 @@ static Void ShellMain(Void) {
 				if ((buf[i] & 128) && ((i + 1) < file->length)) {																						// UTF-8?
 					ConWriteCharacter((WChar)(((buf[i] & 0x1F) << 6) + (buf[i + 1] & 0x3F)));															// Yes :)
 					i++;
+				} else if (((i + 1) < file->length) && (buf[i] == '\r') && (buf[i + 1] == '\n')) {														// Carriage return + Line feed?
+					ConWriteFormated(L"\r\n");																											// Yes :)
+					i++;
+				} else if (buf[i] == '\n') {																											// Line feed?
+					ConWriteFormated(L"\r\n");																											// Yes :)
 				} else {
-					ConWriteCharacter(buf[i]);																											// No, probably it's ASCII
+					ConWriteCharacter(buf[i]);																											// Probably it's some normal ASCII character
 				}
 			}
 			
@@ -179,9 +186,7 @@ static Void ShellMain(Void) {
 			ConSetRefresh(False);																														// Disable screen refresh
 			
 			while ((cur = FsReadDirectoryEntry(dir, i + 2)) != Null) {																					// Let's GO!
-				if ((i != 0) && ((i % 5) == 0)) {
-					ConWriteFormated(L"\r\n");
-				} else if (i != 0) {
+				if (i != 0) {
 					ConWriteFormated(L" ");
 				}
 				
@@ -201,7 +206,7 @@ static Void ShellMain(Void) {
 				i++;																																	// And go to the next one!
 			}
 			
-			if (((i - 1) % 5) == 0) {
+			if (i == 0) {
 				ConWriteFormated(L"\r\n");
 			} else {
 				ConWriteFormated(L"\r\n\r\n");
