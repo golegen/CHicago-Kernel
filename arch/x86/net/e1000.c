@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 19:40 BRT
-// Last edited on December 12 of 2018, at 12:00 BRT
+// Last edited on December 12 of 2018, at 13:13 BRT
 
 #include <chicago/arch/e1000.h>
 #include <chicago/arch/pci.h>
@@ -9,6 +9,7 @@
 
 #include <chicago/alloc.h>
 #include <chicago/mm.h>
+#include <chicago/net.h>
 
 static UIntPtr E1000AllocCont(UIntPtr amount, PUIntPtr virt) {
 	*virt = MemAAllocate(amount, MM_PAGE_SIZE);										// Alloc some space
@@ -161,7 +162,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 		if (mac32[0] == 0) {
 			MemAFree((UIntPtr)dev->mem_base);										// Ok, this isn't right... we failed, unmap everything
 			MemFree((UIntPtr)dev);													// And free our device
-				
+			
 			return;
 		}
 		
@@ -170,11 +171,20 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 		}
 	}
 	
+	PNetworkDevice ndev = NetAddDevice(dev, dev->mac_address, Null);				// Add this network device
+	
+	if (ndev == Null) {
+		MemAFree((UIntPtr)dev->mem_base);											// Ok, this isn't right... we failed, unmap everything
+		MemFree((UIntPtr)dev);														// And free our device
+		
+		return;
+	}
 	
 	dev->rx_descs_phys = E1000AllocCont(0x1000, (PUIntPtr)(&dev->rx_descs));		// Let's alloc the physical (and the virtual) address of the receive buffer
 	
 	if (dev->rx_descs_phys == 0) {
-		MemAFree((UIntPtr)dev->mem_base);											// We failed, unmap everything
+		NetRemoveDevice(ndev);														// We failed
+		MemAFree((UIntPtr)dev->mem_base);											// Unmap everything
 		MemFree((UIntPtr)dev);														// And free our device
 		
 		return;
@@ -189,6 +199,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 			}
 			
 			MemAFree((UIntPtr)dev->rx_descs);
+			NetRemoveDevice(ndev);													// Remove the network device
 			MemAFree((UIntPtr)dev->mem_base);
 			MemFree((UIntPtr)dev);													// And free our device
 
@@ -205,7 +216,8 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 			MemAFree(dev->rx_descs_virt[i]);
 		}
 		
-		MemAFree((UIntPtr)dev->rx_descs);	
+		MemAFree((UIntPtr)dev->rx_descs);
+		NetRemoveDevice(ndev);														// Remove the network device
 		MemAFree((UIntPtr)dev->mem_base);
 		MemFree((UIntPtr)dev);														// And free our device
 		
@@ -227,6 +239,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 			}
 			
 			MemAFree((UIntPtr)dev->rx_descs);
+			NetRemoveDevice(ndev);													// Remove the network device
 			MemAFree((UIntPtr)dev->mem_base);
 			MemFree((UIntPtr)dev);													// And free our device
 

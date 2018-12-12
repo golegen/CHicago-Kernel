@@ -1,7 +1,7 @@
 # File author is Ítalo Lima Marconato Matias
 #
 # Created on May 11 of 2018, at 13:14 BRT
-# Last edited on December 11 of 2018, at 19:42 BRT
+# Last edited on December 12 of 2018, at 13:16 BRT
 
 ARCH ?= x86
 VERBOSE ?= false
@@ -44,6 +44,7 @@ OBJECTS += io/dev/null.c.o io/dev/zero.c.o
 OBJECTS += io/fs/chfs.c.o io/fs/devfs.c.o io/fs/iso9660.c.o
 OBJECTS += mm/alloc.c.o mm/heap.c.o mm/pmm.c.o mm/ualloc.c.o
 OBJECTS += mm/virt.c.o
+OBJECTS += net/net.c.o
 OBJECTS += nls/br.c.o nls/en.c.o nls/nls.c.o
 OBJECTS += sys/ipc.c.o sys/panic.c.o sys/process.c.o sys/rand.c.o
 OBJECTS += sys/sc.c.o sys/shell.c.o sys/string.c.o
