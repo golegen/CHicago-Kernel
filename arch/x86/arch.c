@@ -1,12 +1,13 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:21 BRT
-// Last edited on December 09 of 2018, at 19:11 BRT
+// Last edited on December 11 of 2018, at 18:15 BRT
 
 #include <chicago/arch/bootmgr.h>
 #include <chicago/arch/gdt.h>
 #include <chicago/arch/ide.h>
 #include <chicago/arch/idt.h>
+#include <chicago/arch/pci.h>
 #include <chicago/arch/pit.h>
 #include <chicago/arch/pmm.h>
 #include <chicago/arch/port.h>
@@ -113,6 +114,7 @@ Void ArchInit(Void) {
 	
 	FsInitDeviceList();																							// Init the x86-only devices (and the device list)
 	IDEInit();
+	PCIInit();
 	
 	PWChar bootdev = (PWChar)MemAllocate((StrGetLengthC(BootmgrBootDev) + 1) * 4);								// Let's transform the C string into unicode!
 	
