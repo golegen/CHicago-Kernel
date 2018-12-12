@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 18 of 2018, at 21:12 BRT
-// Last edited on December 09 of 2018, at 17:52 BRT
+// Last edited on December 11 of 2018, at 09:47 BRT
 
 #define __CHICAGO_DISPLAY__
 
@@ -515,6 +515,8 @@ Void DispInit(UIntPtr w, UIntPtr h, UIntPtr bpp, UIntPtr fb) {
 	}
 	
 	for (UIntPtr i = 0; i < DispWidth * DispHeight * bpp; i += MM_PAGE_SIZE) {													// Let's map the frame buffer to the virtual memory!
+		MmDereferencePage(MmGetPhys(DispFrameBuffer + i));																		// MemAAllocate allocated some phys addr as well, free it
+		
 		if (!MmMap(DispFrameBuffer + i, fb + i, MM_MAP_KDEF)) {
 			DbgWriteFormated("PANIC! Couldn't init the display\r\n");
 			ArchHalt();																											// Halt
