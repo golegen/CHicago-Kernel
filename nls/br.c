@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:27 BRT
-// Last edited on December 13 of 2018, at 09:58 BRT
+// Last edited on December 13 of 2018, at 16:15 BRT
 
 #include <chicago/types.h>
 
@@ -34,6 +34,7 @@ PWChar NlsMessagesBr[] = {
 	L"lang  - Altera o idioma do sistema\r\n"
 	L"ls    - Lista o conteudo de um diretório\r\n"
 	L"panic - Força um error fatal\r\n"
+	L"ping  - Envia uma solicitação ARP para outro dispositivo\r\n"
 	L"ps    - Mostra todos os processos\r\n"
 	L"setip - Altera o endereço IPv4 de um dispositivo de rede\r\n"
 	L"ver   - Mostra a versão do sistema\r\n\r\n",
@@ -44,11 +45,13 @@ PWChar NlsMessagesBr[] = {
 	
 	L"Não foi possível listar o diretório atual\r\n\r\n",
 	
+	L"Resposta de %s foi recebida com sucesso\r\n\r\n",
+	
 	L"<Sem Nome>",
 	
 	L"Nome: %s | ID: %d | Uso de Memória: %d %s\r\n%s",
 	
-	L"Uso: setip [dispositivo] [ipv4]\r\n",
+	L"Uso: %s [dispositivo] [ipv4]\r\n",
 	
 	L"Não foi possivel abrir o dispositivo de rede\r\n\r\n",
 	

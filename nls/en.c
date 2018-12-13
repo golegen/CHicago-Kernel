@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:27 BRT
-// Last edited on December 13 of 2018, at 09:58 BRT
+// Last edited on December 13 of 2018, at 16:16 BRT
 
 #include <chicago/types.h>
 
@@ -34,6 +34,7 @@ PWChar NlsMessagesEn[] = {
 	L"lang  - Change the system language\r\n"
 	L"ls    - List the contents of a directory\r\n"
 	L"panic - Crash the system\r\n"
+	L"ping  - Sends an ARP request to another device\r\n"
 	L"ps    - List all the processes\r\n"
 	L"setip - Set the IPv4 address of a network device\r\n"
 	L"ver   - Print the system version\r\n\r\n",
@@ -44,11 +45,13 @@ PWChar NlsMessagesEn[] = {
 	
 	L"Could not list the directory\r\n\r\n",
 	
+	L"%s response was successfully received\r\n\r\n",
+	
 	L"<Unamed>",
 	
 	L"Name: %s | ID: %d | Memory Usage: %d %s\r\n%s",
 	
-	L"Usage: setip [device] [ipv4]\r\n",
+	L"Usage: %s [device] [ipv4]\r\n",
 	
 	L"Failed to open the network device\r\n\r\n",
 	

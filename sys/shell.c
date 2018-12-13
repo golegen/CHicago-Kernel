@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 13 of 2018, at 09:59 BRT
+// Last edited on December 13 of 2018, at 16:17 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -10,6 +10,7 @@
 #include <chicago/device.h>
 #include <chicago/display.h>
 #include <chicago/heap.h>
+#include <chicago/net.h>
 #include <chicago/nls.h>
 #include <chicago/panic.h>
 #include <chicago/process.h>
@@ -263,6 +264,56 @@ static Void ShellMain(Void) {
 			PsCurrentProcess->id = PsCurrentThread->id = 0;																								// *HACK*
 			DbgWriteFormated("PANIC! User requested panic :)\r\n");
 			Panic(PANIC_KERNEL_UNEXPECTED_ERROR);
+		} else if (StrGetLength(argv[0]) == 4 && StrCompare(argv[0], L"ping")) {
+			if (argc < 3) {																																// Show usage?
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_USAGE), argv[0]);																		// Yes
+				continue;
+			}
+			
+			PWChar path = argv[1][0] == '\\' ? FsJoinPath(argv[1], Null) : FsJoinPath(L"\\Devices\\", argv[1]);											// Try to "create" the full file path string
+			
+			if (path == Null) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR1));																					// Failed...
+				continue;
+			}
+			
+			PFsNode file = FsOpenFile(path);																											// Let's open the file!
+			
+			MemFree((UIntPtr)path);
+			
+			if ((file == Null) || ((file->flags & FS_FLAG_FILE) != FS_FLAG_FILE)) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR2), argv[1]);																			// ...
+				continue;
+			}
+			
+			PNetworkDevice dev = NetGetDevice(file);																									// Try to get the network device
+			
+			FsCloseFile(file);
+			
+			if (dev == Null) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR2), argv[1]);																			// ...
+				continue;
+			}
+			
+			UInt8 mac[6] =  { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+			UInt8 ipv4[4] = { 0 };																														// Let's convert the user input!
+			
+			if (!ToIPv4(argv[2], ipv4)) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR3));																					// Failed...
+				continue;
+			}
+			
+			PARPIPv4Socket sock = NetAddARPIPv4Socket(dev, mac, ipv4, False);																			// Create the socket
+			
+			if (sock == Null) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR1));																					// Failed...
+				continue;
+			}
+			
+			NetSendARPIPv4Socket(sock, ARP_OPC_REQUEST);																								// Send the REQUEST command
+			MemFree((UIntPtr)NetReceiveARPIPv4Socket(sock));																							// Wait for the REPLY
+			NetRemoveARPIPv4Socket(sock);																												// Remove the socket
+			ConWriteFormated(NlsGetMessage(NLS_SHELL_PING_REPLY), argv[2]);
 		} else if (StrGetLength(argv[0]) == 2 && StrCompare(argv[0], L"ps")) {																			// List all the processes
 			ConSetRefresh(False);																														// Disable screen refresh
 			
