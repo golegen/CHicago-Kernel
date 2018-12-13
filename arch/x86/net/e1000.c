@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 19:40 BRT
-// Last edited on December 12 of 2018, at 13:13 BRT
+// Last edited on December 12 of 2018, at 19:34 BRT
 
 #include <chicago/arch/e1000.h>
 #include <chicago/arch/pci.h>
@@ -9,7 +9,7 @@
 
 #include <chicago/alloc.h>
 #include <chicago/mm.h>
-#include <chicago/net.h>
+#include <chicago/string.h>
 
 static UIntPtr E1000AllocCont(UIntPtr amount, PUIntPtr virt) {
 	*virt = MemAAllocate(amount, MM_PAGE_SIZE);										// Alloc some space
@@ -35,7 +35,7 @@ static Void E1000WriteCommand(PE1000Device dev, UInt16 addr, UInt32 val) {
 		PortOutLong(dev->io_base, addr);											// Yes
 		PortOutLong(dev->io_base + 4, val);
 	} else {
-		*((PUInt32)(dev->mem_base + addr)) = val;									// No
+		*((Volatile PUInt32)(dev->mem_base + addr)) = val;							// No
 	}
 }
 
@@ -44,7 +44,7 @@ static UInt32 E1000ReadCommand(PE1000Device dev, UInt16 addr) {
 		PortOutLong(dev->io_base, addr);											// Yes
 		return PortInLong(dev->io_base + 4);
 	} else {
-		return *((PUInt32)(dev->mem_base + addr));									// No
+		return *((Volatile PUInt32)(dev->mem_base + addr));							// No
 	}
 }
 
@@ -62,17 +62,37 @@ static UInt32 E1000ReadEEPROM(PE1000Device dev, UInt8 addr) {
 	return (data >> 16) & 0xFFFF;
 }
 
+static Void E1000Send(PVoid ndev, UIntPtr len, PUInt8 data) {
+	Volatile PE1000Device dev = (PE1000Device)ndev;
+	UInt8 old = dev->tx_cur;
+	
+	StrCopyMemory((PUInt8)(dev->tx_descs_virt[old]), data, len);
+	
+	dev->tx_descs[old].length = len;
+	dev->tx_descs[old].cmd = 0x1B;
+	dev->tx_descs[old].status = 0;
+	dev->tx_cur = (dev->tx_cur + 1) % 8;
+	
+	E1000WriteCommand(dev, 0x3818, dev->tx_cur);
+	
+	while (!(dev->tx_descs[old].status & 0xFF)) ;
+}
+
 static Void E1000Handler(PVoid priv) {
-	PE1000Device dev = (PE1000Device)priv;
+	Volatile PE1000Device dev = (PE1000Device)priv;
 	UInt32 status = E1000ReadCommand(dev, 0xC0);									// Read the status
 	
 	E1000WriteCommand(dev, 0xD0, 1);												// Without this, the card may spam interrupts...
 	
-	if (status & 0x04) { }															// Start link (we don't need to do anything, probably
-	else if (status & 0x10) { }														// Again, we don't need to do anything here
-	else if (status & 0x80) {														// Ok, handle receive!!!
+	if (status & 0x04) {															// Linkup
+		UInt32 val = E1000ReadCommand(dev, 0);
+		E1000WriteCommand(dev, 0, val | 0x40);
+	} else if (status & 0x80) {														// Ok, handle receive!!!
 		while ((dev->rx_descs[dev->rx_cur].status & 0x01) == 0x01) {
-			UInt16 old = dev->rx_cur;												// (TODO)
+			UInt16 old = dev->rx_cur;
+			UIntPtr len = dev->rx_descs[old].length;
+			
+			NetHandlePacket(dev->ndev, len, (PUInt8)dev->rx_descs_virt[old]);		// Our Net layer should handle it
 			
 			dev->rx_descs[old].status = 0;
 			dev->rx_cur = (dev->rx_cur + 1) % 32;
@@ -171,9 +191,9 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 		}
 	}
 	
-	PNetworkDevice ndev = NetAddDevice(dev, dev->mac_address, Null);				// Add this network device
+	dev->ndev = NetAddDevice(dev, dev->mac_address, E1000Send);						// Add this network device
 	
-	if (ndev == Null) {
+	if (dev->ndev == Null) {
 		MemAFree((UIntPtr)dev->mem_base);											// Ok, this isn't right... we failed, unmap everything
 		MemFree((UIntPtr)dev);														// And free our device
 		
@@ -183,7 +203,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 	dev->rx_descs_phys = E1000AllocCont(0x1000, (PUIntPtr)(&dev->rx_descs));		// Let's alloc the physical (and the virtual) address of the receive buffer
 	
 	if (dev->rx_descs_phys == 0) {
-		NetRemoveDevice(ndev);														// We failed
+		NetRemoveDevice(dev->ndev);													// We failed
 		MemAFree((UIntPtr)dev->mem_base);											// Unmap everything
 		MemFree((UIntPtr)dev);														// And free our device
 		
@@ -199,7 +219,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 			}
 			
 			MemAFree((UIntPtr)dev->rx_descs);
-			NetRemoveDevice(ndev);													// Remove the network device
+			NetRemoveDevice(dev->ndev);												// Remove the network device
 			MemAFree((UIntPtr)dev->mem_base);
 			MemFree((UIntPtr)dev);													// And free our device
 
@@ -217,7 +237,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 		}
 		
 		MemAFree((UIntPtr)dev->rx_descs);
-		NetRemoveDevice(ndev);														// Remove the network device
+		NetRemoveDevice(dev->ndev);													// Remove the network device
 		MemAFree((UIntPtr)dev->mem_base);
 		MemFree((UIntPtr)dev);														// And free our device
 		
@@ -239,7 +259,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 			}
 			
 			MemAFree((UIntPtr)dev->rx_descs);
-			NetRemoveDevice(ndev);													// Remove the network device
+			NetRemoveDevice(dev->ndev);												// Remove the network device
 			MemAFree((UIntPtr)dev->mem_base);
 			MemFree((UIntPtr)dev);													// And free our device
 
@@ -249,6 +269,9 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 		dev->tx_descs[i].cmd = 0;
 		dev->tx_descs[i].status = 1;
 	}
+	
+	UInt32 val = E1000ReadCommand(dev, 0);											// Linkup
+	E1000WriteCommand(dev, 0, val | 0x40);
 	
 	for (UInt32 i = 0; i < 0x80; i++) {
 		E1000WriteCommand(dev, 0x5200 + (i * 4), 0);

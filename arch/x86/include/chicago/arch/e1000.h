@@ -1,12 +1,12 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 19:41 BRT
-// Last edited on December 12 of 2018, at 11:08 BRT
+// Last edited on December 12 of 2018, at 18:18 BRT
 
 #ifndef __CHICAGO_ARCH_E1000_H__
 #define __CHICAGO_ARCH_E1000_H__
 
-#include <chicago/types.h>
+#include <chicago/net.h>
 
 typedef struct {
 	UInt64 addr;
@@ -37,6 +37,7 @@ typedef struct {
 	Boolean use_io;
 	UInt16 io_base;
 	UInt32 mem_base;
+	PNetworkDevice ndev;
 	UInt8 mac_address[6];
 	PE1000RXDesc rx_descs;
 	UIntPtr rx_descs_virt[32];
