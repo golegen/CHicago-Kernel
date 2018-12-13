@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:36 BRT
-// Last edited on December 12 of 2018, at 21:21 BRT
+// Last edited on December 13 of 2018, at 09:44 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/device.h>
@@ -26,6 +26,8 @@ static Boolean NetDeviceControl(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 ob
 	
 	if (cmd == 0) {																												// Get MAC Address
 		StrCopyMemory(obuf, ndev->mac_address, 6);
+	} else if (cmd == 1) {																										// Set the IP(v4) address
+		StrCopyMemory(ndev->ipv4_address, ibuf, 4);
 	} else {
 		return False;																											// ...
 	}
@@ -118,7 +120,7 @@ static Void NetHandleARPPacket(PNetworkDevice dev, PARPHeader hdr) {
 		return;
 	}
 	
-	if (StrCompareMemory(dev->ipv4_address, hdr->ipv4.dest_pr, 4)) {															// For us?
+	if (StrCompareMemory(dev->ipv4_address, hdr->ipv4.dst_pr, 4)) {																// For us?
 		if (hdr->opcode == FromNetByteOrder16(ARP_OPC_REQUEST)) {																// Yes, was a request?
 			NetSendARPIPv4Packet(dev, hdr->ipv4.src_hw, hdr->ipv4.src_pr, ARP_OPC_REPLY);										// Yes, so let's reply :)
 		}

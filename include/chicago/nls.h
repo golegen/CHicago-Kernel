@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:26 BRT
-// Last edited on December 10 of 2018, at 16:28 BRT
+// Last edited on December 13 of 2018, at 09:58 BRT
 
 #ifndef __CHICAGO_NLS_H__
 #define __CHICAGO_NLS_H__
@@ -27,7 +27,11 @@
 #define NLS_SHELL_LS_ERR 0x0D
 #define NLS_SHELL_PS_UNAMED 0x0E
 #define NLS_SHELL_PS 0x0F
-#define NLS_SHELL_INVALID 0x10
+#define NLS_SHELL_SETIP_USAGE 0x10
+#define NLS_SHELL_SETIP_ERR1 0x11
+#define NLS_SHELL_SETIP_ERR2 0x12
+#define NLS_SHELL_SETIP_ERR3 0x13
+#define NLS_SHELL_INVALID 0x14
 
 PWChar NlsGetMessage(UIntPtr msg);
 PWChar NlsGetLanguages(Void);

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:27 BRT
-// Last edited on December 10 of 2018, at 16:32 BRT
+// Last edited on December 13 of 2018, at 09:58 BRT
 
 #include <chicago/types.h>
 
@@ -35,6 +35,7 @@ PWChar NlsMessagesEn[] = {
 	L"ls    - List the contents of a directory\r\n"
 	L"panic - Crash the system\r\n"
 	L"ps    - List all the processes\r\n"
+	L"setip - Set the IPv4 address of a network device\r\n"
 	L"ver   - Print the system version\r\n\r\n",
 	
 	L"Available languages: %s\r\n\r\n",
@@ -46,6 +47,14 @@ PWChar NlsMessagesEn[] = {
 	L"<Unamed>",
 	
 	L"Name: %s | ID: %d | Memory Usage: %d %s\r\n%s",
+	
+	L"Usage: setip [device] [ipv4]\r\n",
+	
+	L"Failed to open the network device\r\n\r\n",
+	
+	L"The network device doesn't exist: '%s'\r\n\r\n",
+	
+	L"Invalid IPv4 address\r\n\r\n",
 	
 	L"Invalid command: '%s'\r\n\r\n"
 };

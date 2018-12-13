@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 10 of 2018, at 18:05 BRT
+// Last edited on December 13 of 2018, at 09:59 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -38,6 +38,50 @@ static PWChar BStr(UIntPtr bytes) {
 	} else {
 		return L"GB";																																	// 1GB+
 	}
+}
+
+static Boolean ToIPv4(PWChar in, PUInt8 out) {
+	UInt32 accum = 0;
+	UInt32 segs = 0;
+	UInt32 cnt = 0;
+	
+	while (*in != '\0') {																																// Let's try to parse the IP(v4) address!
+		if (*in == '.') {																																// Separator?
+			if (cnt == 0) {																																// Yes, we have at least one character?
+				return False;																															// Nope, so it's a invalid address...
+			} else if (segs == 3) {																														// More than 4 segments?
+				return False;																															// Yes, invalid address
+			}
+			
+			out[segs++] = (UInt8)accum;																													// Add this segment
+			accum = 0;																																	// And go to the next one
+			cnt = 0;
+			in++;
+			
+			continue;
+		}
+		
+		if ((*in < '0') || (*in > '9')) {																												// Valid number?
+			return False;																																// Nope
+		}
+		
+		if ((accum = (accum * 10) + (*in - '0')) > 255) {																								// Valid 8-bit number?
+			return False;																																// Nope
+		}
+		
+		cnt++;
+		in++;
+	}
+	
+	if (segs != 3) {																																	// More than 4 segments?
+		return False;																																	// Yes, invalid address
+	} else if (cnt == 0) {																																// We have at least one characer?
+		return False;																																	// Nope
+	}
+	
+	out[segs++] = (UInt8)accum;																															// Add this last segment!
+	
+	return True;
 }
 
 static Void ShellMain(Void) {
@@ -232,6 +276,39 @@ static Void ShellMain(Void) {
 			
 			DispRefresh();																																// Refresh the screen
 			ConSetRefresh(True);																														// Enable screen refresh
+		} else if (StrGetLength(argv[0]) == 5 && StrCompare(argv[0], L"setip")) {																		// Set the IP(v4) address
+			if (argc < 3) {																																// Show usage?
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_USAGE), argv[0]);																		// Yes
+				continue;
+			}
+			
+			PWChar path = argv[1][0] == '\\' ? FsJoinPath(argv[1], Null) : FsJoinPath(L"\\Devices\\", argv[1]);											// Try to "create" the full file path string
+			
+			if (path == Null) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR1));																					// Failed...
+				continue;
+			}
+			
+			PFsNode file = FsOpenFile(path);																											// Let's open the file!
+			
+			MemFree((UIntPtr)path);
+			
+			if ((file == Null) || ((file->flags & FS_FLAG_FILE) != FS_FLAG_FILE)) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR2), argv[1]);																			// ...
+				continue;
+			}
+			
+			UInt8 newip[4] = { 0 };																														// Let's convert the user input!
+			
+			if (!ToIPv4(argv[2], newip)) {
+				FsCloseFile(file);																														// Failed...
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR3));
+				continue;
+			}
+			
+			FsControlFile(file, 1, newip, Null);																										// Change the IPv4 address
+			FsCloseFile(file);																															// And close the file :)
+			ConWriteFormated(L"\r\n");
 		} else if (StrGetLength(argv[0]) == 3 && StrCompare(argv[0], L"ver")) {																			// Print the system version
 			ConSetRefresh(False);																														// Disable screen refresh
 			ConWriteFormated(NlsGetMessage(NLS_OS_NAME), CHICAGO_ARCH);																					// Print some system informations
@@ -240,7 +317,7 @@ static Void ShellMain(Void) {
 			DispRefresh();																																// Refresh the screen
 			ConSetRefresh(True);																														// Enable screen refresh
 		} else if (StrGetLength(argv[0]) == 0) {
-			continue;																																	// No command :)
+			ConWriteFormated(L"\r\n\r\n");																												// No command :)
 		} else {
 			ConWriteFormated(NlsGetMessage(NLS_SHELL_INVALID), argv[0]);																				// Invalid command!
 		}
