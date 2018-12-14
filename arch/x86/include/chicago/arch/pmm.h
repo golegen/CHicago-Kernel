@@ -1,16 +1,15 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on June 28 of 2018, at 19:20 BRT
-// Last edited on August 11 of 2018, at 18:51 BRT
+// Last edited on December 14 of 2018, at 13:00 BRT
 
 #ifndef __CHICAGO_ARCH_PMM_H__
 #define __CHICAGO_ARCH_PMM_H__
 
 #include <chicago/types.h>
 
-extern PUIntPtr MmPageStack;
+extern PUIntPtr MmPageMap;
 extern PUIntPtr MmPageReferences;
-extern IntPtr MmPageStackPointer;
 extern UIntPtr MmMaxPages;
 extern UIntPtr MmUsedPages;
 

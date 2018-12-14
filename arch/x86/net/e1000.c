@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 19:40 BRT
-// Last edited on December 13 of 2018, at 15:55 BRT
+// Last edited on December 14 of 2018, at 13:27 BRT
 
 #include <chicago/arch/e1000.h>
 #include <chicago/arch/pci.h>
@@ -18,16 +18,7 @@ static UIntPtr E1000AllocCont(UIntPtr amount, PUIntPtr virt) {
 		return 0;																	// Failed :(
 	}
 	
-	UIntPtr phys = MmGetPhys(*virt + (amount - MM_PAGE_SIZE));						// Let's remap everything!
-	
-	for (UIntPtr i = 0; i < amount; i += MM_PAGE_SIZE) {
-		if (!MmMap(*virt + i, phys + i, MM_MAP_KDEF)) {
-			MemAFree(*virt);														// Failed...
-			return 0;
-		}
-	}
-	
-	return phys;
+	return MmGetPhys(*virt);
 }
 
 static Void E1000WriteCommand(PE1000Device dev, UInt16 addr, UInt32 val) {
@@ -247,7 +238,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 	for (UInt32 i = 0; i < 8; i++) {
 		dev->tx_descs[i].addr = E1000AllocCont(0x3000, &dev->tx_descs_virt[i]);		// Alloc the phys/virt address of this transmit desc
 		
-		if (dev->rx_descs[i].addr == 0) {
+		if (dev->tx_descs[i].addr == 0) {
 			for (UIntPtr j = 0; j < i; j++) {										// We failed, unmap everything
 				MemAFree(dev->tx_descs_virt[j]);
 			}

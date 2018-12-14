@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 31 of 2018, at 18:45 BRT
-// Last edited on October 27 of 2018, at 15:54 BRT
+// Last edited on December 14 of 2018, at 13:15 BRT
 
 #define __CHICAGO_PMM__
 
@@ -10,6 +10,7 @@
 
 #include <chicago/debug.h>
 #include <chicago/mm.h>
+#include <chicago/string.h>
 
 UIntPtr MmBootAllocPointer = (UIntPtr)&KernelEnd;
 UIntPtr KernelRealEnd = 0;
@@ -52,10 +53,12 @@ UIntPtr PMMCountMemory(Void) {
 Void PMMInit(Void) {
 	MmMaxPages = PMMCountMemory() / MM_PAGE_SIZE;																		// Get memory size based on the memory map entries
 	MmUsedPages = MmMaxPages;																							// We're going to free the avaliable pages later
-	MmPageStack = (PUIntPtr)MmBootAlloc(MmMaxPages * sizeof(UIntPtr), False);											// Alloc the page frame allocator stack using the initial boot allocator
+	MmPageMap = (PUIntPtr)MmBootAlloc(MmMaxPages / 8, False);															// Alloc the page frame allocator stack using the initial boot allocator
 	MmPageReferences = (PUIntPtr)MmBootAlloc(MmMaxPages * sizeof(UIntPtr), False);										// Also alloc the page frame reference map
 	KernelRealEnd = MmBootAllocPointer;																					// Setup the KernelRealEnd variable
 	MmBootAllocPointer = 0;																								// Break/disable the MmBootAlloc, now we should use MemAllocate/AAllocate/Reallocate/ZAllocate/Free/AFree
+	
+	StrSetMemory((PUInt8)MmPageMap, 0xFF, MmMaxPages / 8);																// We're going to free the avaliable pages later
 	
 	if ((KernelRealEnd % MM_PAGE_SIZE) != 0) {																			// Align the KernelRealEnd variable to page size
 		KernelRealEnd += MM_PAGE_SIZE - (KernelRealEnd % MM_PAGE_SIZE);

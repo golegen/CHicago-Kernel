@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:15 BRT
-// Last edited on December 09 of 2018, at 19:04 BRT
+// Last edited on December 14 of 2018, at 12:43 BRT
 
 #ifndef __CHICAGO_TYPES_H__
 #define __CHICAGO_TYPES_H__
@@ -42,9 +42,11 @@ typedef signed Long Long Int64, *PInt64;
 /* Define our IntPtr type */
 
 #ifdef ARCH_64
+#define UINTPTR_MAX 0xFFFFFFFFFFFFFFFF
 typedef unsigned Long Long UIntPtr, *PUIntPtr;
 typedef signed Long Long IntPtr, *PIntPtr;
 #else
+#define UINTPTR_MAX 0xFFFFFFFF
 typedef unsigned Int UIntPtr, *PUIntPtr;
 typedef signed Int IntPtr, *PIntPtr;
 #endif
