@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 01:14 BRT
-// Last edited on December 09 of 2018, at 19:06 BRT
+// Last edited on December 14 of 2018, at 15:21 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/mm.h>
@@ -148,12 +148,12 @@ Void ScPsSleep(UIntPtr ms) {
 	PsSleep(ms);																																			// Just redirect
 }
 
-Void ScPsWaitThread(UIntPtr tid) {
-	PsWaitThread(tid);																																		// Just redirect
+UIntPtr ScPsWaitThread(UIntPtr id) {
+	return PsWaitThread(id);																																// Just redirect
 }
 
-Void ScPsWaitProcess(UIntPtr pid) {
-	PsWaitProcess(pid);																																		// Just redirect
+UIntPtr ScPsWaitProcess(UIntPtr id) {
+	return PsWaitProcess(id);																																// Just redirect
 }
 
 Void ScPsLock(PLock lock) {
@@ -172,12 +172,12 @@ Void ScPsUnlock(PLock lock) {
 	PsUnlock(lock);																																			// Just redirect
 }
 
-Void ScPsExitThread(Void) {
-	PsExitThread();																																			// Just redirect
+Void ScPsExitThread(UIntPtr ret) {
+	PsExitThread(ret);																																		// Just redirect
 }
 
-Void ScPsExitProcess(Void) {
-	PsExitProcess();																																		// Just redirect
+Void ScPsExitProcess(UIntPtr ret) {
+	PsExitProcess(ret);																																		// Just redirect
 }
 
 Void ScPsForceSwitch(Void) {

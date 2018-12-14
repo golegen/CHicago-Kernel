@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on December 13 of 2018, at 15:57 BRT
+// Last edited on December 14 of 2018, at 15:24 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -77,6 +77,6 @@ Void KernelMainLate(Void) {
 	ConWriteFormated(NlsGetMessage(NLS_OS_CODENAME), CHICAGO_CODENAME);
 	ConWriteFormated(NlsGetMessage(NLS_OS_VSTR), CHICAGO_MAJOR, CHICAGO_MINOR, CHICAGO_BUILD);
 	
-	ShellRun();																												// Run the shell!a
-	ArchHalt();																												// Halt
+	ShellRun();																												// Run the shell!
+	while (True) { PsSwitchTask(Null); }																					// Halt
 }

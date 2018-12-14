@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 01:04 BRT
-// Last edited on December 09 of 2018, at 16:59 BRT
+// Last edited on December 14 of 2018, at 15:19 BRT
 
 #ifndef __CHICAGO_SC_H__
 #define __CHICAGO_SC_H__
@@ -31,12 +31,12 @@ UIntPtr ScPsCreateThread(UIntPtr entry);
 UIntPtr ScPsGetTID(Void);
 UIntPtr ScPsGetPID(Void);
 Void ScPsSleep(UIntPtr ms);
-Void ScPsWaitThread(UIntPtr tid);
-Void ScPsWaitProcess(UIntPtr pid);
+UIntPtr ScPsWaitThread(UIntPtr id);
+UIntPtr ScPsWaitProcess(UIntPtr id);
 Void ScPsLock(PLock lock);
 Void ScPsUnlock(PLock lock);
-Void ScPsExitThread(Void);
-Void ScPsExitProcess(Void);
+Void ScPsExitThread(UIntPtr ret);
+Void ScPsExitProcess(UIntPtr ret);
 Void ScPsForceSwitch(Void);
 IntPtr ScFsOpenFile(PWChar path);
 Void ScFsCloseFile(IntPtr file);

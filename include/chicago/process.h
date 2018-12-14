@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:42 BRT
-// Last edited on December 09 of 2018, at 16:58 BRT
+// Last edited on December 14 of 2018, at 15:10 BRT
 
 #ifndef __CHICAGO_PROCESS_H__
 #define __CHICAGO_PROCESS_H__
@@ -17,7 +17,12 @@
 #define PsDontRequeue ((PVoid)1)
 #define PS_DEFAULT_QUANTUM 20
 
-typedef Boolean Lock, *PLock;
+struct ThreadStruct;
+
+typedef struct {
+	Volatile Boolean locked;
+	struct ThreadStruct *owner;
+} Lock, *PLock;
 
 typedef struct {
 	UIntPtr id;
@@ -34,11 +39,16 @@ typedef struct {
 	PWChar exec_path;
 } Process, *PProcess;
 
-typedef struct {
+typedef struct ThreadStruct {
 	UIntPtr id;
 	PContext ctx;
-	UIntPtr quantum;
+	UIntPtr retv;
+	UIntPtr time;
+	UIntPtr wtime;
 	PProcess parent;
+	PLock waitl;
+	PProcess waitp;
+	struct ThreadStruct *waitt;
 } Thread, *PThread;
 
 typedef struct {
@@ -51,6 +61,10 @@ extern Boolean PsTaskSwitchEnabled;
 extern PThread PsCurrentThread;
 extern PQueue PsThreadQueue;
 extern PList PsProcessList;
+extern PList PsSleepList;
+extern PList PsWaittList;
+extern PList PsWaitpList;
+extern PList PsWaitlList;
 #endif
 
 PThread PsCreateThreadInt(UIntPtr entry, UIntPtr userstack, Boolean user);
@@ -61,13 +75,15 @@ Void PsAddThread(PThread th);
 Void PsAddProcess(PProcess proc);
 PThread PsGetThread(UIntPtr id);
 PProcess PsGetProcess(UIntPtr id);
-Void PsExitThread(Void);
-Void PsExitProcess(Void);
+Void PsExitThread(UIntPtr ret);
+Void PsExitProcess(UIntPtr ret);
 Void PsSleep(UIntPtr ms);
-Void PsWaitThread(UIntPtr thid);
-Void PsWaitProcess(UIntPtr pid);
+UIntPtr PsWaitThread(UIntPtr id);
+UIntPtr PsWaitProcess(UIntPtr id);
 Void PsLock(PLock lock);
 Void PsUnlock(PLock lock);
+Void PsWakeup(PList list, PThread th);
+Void PsWakeup2(PList list, PThread th);
 PContext PsCreateContext(UIntPtr entry, UIntPtr userstack, Boolean user);
 Void PsFreeContext(PContext context);
 Void PsSwitchTask(PVoid priv);

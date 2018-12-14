@@ -1,13 +1,13 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on December 09 of 2018, at 17:58 BRT
+// Last edited on December 14 of 2018, at 15:15 BRT
 
 #include <chicago/display.h>
 #include <chicago/process.h>
 #include <chicago/string.h>
 
-Lock ConLock = False;
+Lock ConLock = { False, Null };
 UIntPtr ConCursorX = 0;
 UIntPtr ConCursorY = 0;
 Boolean ConRefresh = True;

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 19 of 2018, at 21:40 BRT
-// Last edited on December 09 of 2018, at 17:34 BRT
+// Last edited on December 14 of 2018, at 15:16 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -10,7 +10,7 @@
 #include <chicago/queue.h>
 
 Queue RawMouseDeviceQueue;
-Lock RawMouseDeviceQueueLock = False;
+Lock RawMouseDeviceQueueLock = { False, Null };
 
 static Boolean RawMouseDeviceReadInt(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 	(Void)dev; (Void)off;

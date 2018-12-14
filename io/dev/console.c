@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 07 of 2018, at 10:41 BRT
-// Last edited on December 09 of 2018, at 17:33 BRT
+// Last edited on December 14 of 2018, at 15:15 BRT
 
 #include <chicago/console.h>
 #include <chicago/debug.h>
@@ -10,7 +10,7 @@
 #include <chicago/process.h>
 
 Queue ConsoleDeviceKeyboardQueue;
-Lock ConsoleDeviceKeyboardQueueLock = False;
+Lock ConsoleDeviceKeyboardQueueLock = { False, Null };
 
 Void ConsoleDeviceReadKeyboard(UIntPtr len, PWChar buf) {
 	if (len == 0) {

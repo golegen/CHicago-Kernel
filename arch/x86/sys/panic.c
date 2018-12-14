@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 27 of 2018, at 21:48 BRT
-// Last edited on December 09 of 2018, at 18:11 BRT
+// Last edited on December 14 of 2018, at 15:10 BRT
 
 #include <chicago/arch/registers.h>
 
@@ -34,7 +34,7 @@ Void ArchPanicWriteHex(UInt32 val) {
 Void ArchPanic(UInt32 err, PVoid priv) {
 	if (PsCurrentThread != Null) {																				// Tasking initialized?
 		if (!((PsCurrentThread->id == 0) && (PsCurrentProcess->id == 0))) {										// Yes, this is the main kernel process?
-			PsExitProcess();																					// Nope, just PsExitProcess()
+			PsExitProcess(1);																					// Nope, just PsExitProcess()
 		}
 	}
 	

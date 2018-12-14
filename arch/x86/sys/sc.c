@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 00:48 BRT
-// Last edited on December 09 of 2018, at 16:52 BRT
+// Last edited on December 14 of 2018, at 15:22 BRT
 
 #include <chicago/arch/idt.h>
 #include <chicago/sc.h>
@@ -64,12 +64,12 @@ Void ArchScHandler(PRegisters regs) {
 		ScPsSleep(regs->ebx);
 		break;
 	}
-	case 0x0E: {																						// Void PsWaitThread(UIntPtr tid)
-		ScPsWaitThread(regs->ebx);
+	case 0x0E: {																						// UIntPtr PsWaitThread(UIntPtr id)
+		regs->eax = ScPsWaitThread(regs->ebx);
 		break;
 	}
-	case 0x0F: {																						// Void PsWaitProcess(UIntPtr pid)
-		ScPsWaitProcess(regs->ebx);
+	case 0x0F: {																						// UIntPtr PsWaitProcess(UIntPtr id)
+		regs->eax = ScPsWaitProcess(regs->ebx);
 		break;
 	}
 	case 0x10: {																						// Void PsLock(PLock lock)
@@ -80,12 +80,12 @@ Void ArchScHandler(PRegisters regs) {
 		ScPsUnlock((PLock)regs->ebx);
 		break;
 	}
-	case 0x12: {																						// Void PsExitThread(Void)
-		ScPsExitThread();
+	case 0x12: {																						// Void PsExitThread(UIntPtr ret)
+		ScPsExitThread(regs->ebx);
 		break;
 	}
-	case 0x13: {																						// Void PsExitProcess(Void)
-		ScPsExitProcess();
+	case 0x13: {																						// Void PsExitProcess(UIntPtr ret)
+		ScPsExitProcess(regs->ebx);
 		break;
 	}
 	case 0x14: {																						// Void PsForceSwitch(Void)

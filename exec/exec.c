@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 21:03 BRT
-// Last edited on December 09 of 2018, at 17:16 BRT
+// Last edited on December 14 of 2018, at 15:13 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -108,14 +108,14 @@ static Boolean ExecRelocate(UIntPtr base, PUInt8 buf) {
 
 static Void ExecCreateProcessInt(Void) {
 	if ((PsCurrentThread == Null) || (PsCurrentProcess == Null) || (PsCurrentProcess->exec_path == Null)) {			// Sanity checks
-		PsExitProcess();
+		PsExitProcess(1);
 	}
 	
 	UIntPtr stack = VirtAllocAddress(0, 0x8000, VIRT_PROT_READ | VIRT_PROT_WRITE | VIRT_FLAGS_HIGHEST);				// Alloc the stack
 	
 	if (stack == 0) {
 		MemFree((UIntPtr)PsCurrentProcess->exec_path);																// Failed...
-		PsExitProcess();
+		PsExitProcess(1);
 	}
 	
 	PFsNode file = FsOpenFile(PsCurrentProcess->exec_path);															// Try to open the executable
@@ -124,7 +124,7 @@ static Void ExecCreateProcessInt(Void) {
 	
 	if (file == Null) {
 		VirtFreeAddress(stack, 0x8000);																				// Failed to open it
-		PsExitProcess();
+		PsExitProcess(1);
 	}
 	
 	PUInt8 buf = (PUInt8)MemAllocate(file->length);																	// Try to alloc the buffer to read it
@@ -132,12 +132,12 @@ static Void ExecCreateProcessInt(Void) {
 	if (buf == Null) {
 		FsCloseFile(file);																							// Failed
 		VirtFreeAddress(stack, 0x8000);
-		PsExitProcess();
+		PsExitProcess(1);
 	} else if (!FsReadFile(file, 0, file->length, buf)) {															// Read it!
 		MemFree((UIntPtr)buf);																						// Failed...
 		FsCloseFile(file);
 		VirtFreeAddress(stack, 0x8000);
-		PsExitProcess();
+		PsExitProcess(1);
 	}
 	
 	FsCloseFile(file);																								// Ok, now we can close the file!
@@ -145,7 +145,7 @@ static Void ExecCreateProcessInt(Void) {
 	if (!CHExecValidateHeader(buf, True)) {																			// Check if this is a valid CHExec executable
 		MemFree((UIntPtr)buf);																						// ...
 		VirtFreeAddress(stack, 0x8000);
-		PsExitProcess();
+		PsExitProcess(1);
 	}
 	
 	UIntPtr base = CHExecLoadSections(buf);																			// Load the sections into the memory
@@ -154,24 +154,24 @@ static Void ExecCreateProcessInt(Void) {
 	if (base == 0) {
 		MemFree((UIntPtr)buf);																						// Failed to load the sections...
 		VirtFreeAddress(stack, 0x8000);
-		PsExitProcess();
+		PsExitProcess(1);
 	} else if (!ExecLoadDependencies(buf)) {																		// Load the dependencies
 		MmFreeUserMemory(base);
 		MemFree((UIntPtr)buf);
 		VirtFreeAddress(stack, 0x8000);
-		PsExitProcess();
+		PsExitProcess(1);
 	} else if (!ExecRelocate(base, buf)) {																			// And relocate!
 		MmFreeUserMemory(base);
 		MemFree((UIntPtr)buf);
 		VirtFreeAddress(stack, 0x8000);
-		PsExitProcess();
+		PsExitProcess(1);
 	}
 	
 	MemFree((UIntPtr)buf);																							// Free the buffer
 	ArchUserJump(entry, stack + 0x8000);																			// Jump!
 	MmFreeUserMemory(base);																							// If it returns (somehow), free the sections
 	VirtFreeAddress(stack, 0x8000);																					// Free the stack
-	PsExitProcess();																								// And exit
+	PsExitProcess(1);																								// And exit
 }
 
 PProcess ExecCreateProcess(PWChar path) {
