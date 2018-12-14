@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 28 of 2018, at 01:09 BRT
-// Last edited on December 14 of 2018, at 15:48 BRT
+// Last edited on December 14 of 2018, at 17:56 BRT
 
 #define __CHICAGO_ARCH_PROCESS__
 
@@ -85,7 +85,7 @@ Void PsSwitchTaskTimer(PRegisters regs) {
 	PThread old = PsCurrentThread;																					// Save the old thread
 	
 	PsCurrentThread = QueueRemove(PsThreadQueue);																	// Get the next thread
-	old->time = PS_DEFAULT_QUANTUM;																					// Set the default quantum to the old thread
+	old->time = PS_DEFAULT_QUANTUM - 1;																				// Set the default quantum to the old thread
 	old->ctx->esp = (UIntPtr)regs;																					// Save the old context
 	
 	QueueAdd(PsThreadQueue, old);																					// Add the old thread to the queue again
@@ -121,7 +121,7 @@ Void PsSwitchTaskForce(PRegisters regs) {
 	
 	if (old != Null) {																								// Save the old thread info?
 		PsCurrentThread->time += old->time;																			// Yes, give the quantum of the old process to the new one!
-		old->time = PS_DEFAULT_QUANTUM;																				// And set the default quantum to the old thread
+		old->time = PS_DEFAULT_QUANTUM - 1;																			// And set the default quantum to the old thread
 		old->ctx->esp = (UIntPtr)regs;																				// Save the old context
 		Asm Volatile("fxsave (%0)" :: "r"(PsFPUStateSave));															// And the old fpu state
 		StrCopyMemory(old->ctx->fpu_state, PsFPUStateSave, 512);

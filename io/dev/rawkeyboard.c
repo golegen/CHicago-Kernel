@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 12 of 2018, at 21:08 BRT
-// Last edited on December 14 of 2018, at 15:16 BRT
+// Last edited on December 14 of 2018, at 18:27 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -10,7 +10,8 @@
 #include <chicago/queue.h>
 
 Queue RawKeyboardDeviceQueue;
-Lock RawKeyboardDeviceQueueLock = { False, Null };
+Lock RawKeyboardDeviceQueueReadLock = { False, Null };
+Lock RawKeyboardDeviceQueueWriteLock = { False, Null };
 
 static Boolean RawKeyboardDeviceReadInt(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 	(Void)dev; (Void)off;
@@ -19,14 +20,14 @@ static Boolean RawKeyboardDeviceReadInt(PDevice dev, UIntPtr off, UIntPtr len, P
 }
 
 Void RawKeyboardDeviceWrite(UInt8 data) {
-	PsLock(&RawKeyboardDeviceQueueLock);													// Lock
+	PsLock(&RawKeyboardDeviceQueueWriteLock);												// Lock
 	
 	while (RawKeyboardDeviceQueue.length >= 1024) {											// Don't let the queue grow too much
 		QueueRemove(&RawKeyboardDeviceQueue);
 	}
 	
 	QueueAdd(&RawKeyboardDeviceQueue, (PVoid)data);											// Add to the queue
-	PsUnlock(&RawKeyboardDeviceQueueLock);													// Unlock!
+	PsUnlock(&RawKeyboardDeviceQueueWriteLock);												// Unlock!
 }
 
 Void RawKeyboardDeviceRead(UIntPtr len, PUInt8 buf) {
@@ -38,23 +39,23 @@ Void RawKeyboardDeviceRead(UIntPtr len, PUInt8 buf) {
 		PsSwitchTask(Null);
 	}
 	
-	PsLock(&RawKeyboardDeviceQueueLock);													// Lock
+	PsLock(&RawKeyboardDeviceQueueReadLock);												// Lock
 	
 	for (UIntPtr i = 0; i < len; i++) {														// Fill the buffer!
 		buf[i] = (UInt8)QueueRemove(&RawKeyboardDeviceQueue);
 	}
 	
-	PsUnlock(&RawKeyboardDeviceQueueLock);													// Unlock!
+	PsUnlock(&RawKeyboardDeviceQueueReadLock);												// Unlock!
 }
 
 Void RawKeyboardDeviceClear(Void) {
-	PsLock(&RawKeyboardDeviceQueueLock);													// Lock
+	PsLock(&RawKeyboardDeviceQueueReadLock);												// Lock
 	
 	while (RawKeyboardDeviceQueue.length != 0) {											// Clean!
 		QueueRemove(&RawKeyboardDeviceQueue);
 	}
 	
-	PsUnlock(&RawKeyboardDeviceQueueLock);													// Unlock!
+	PsUnlock(&RawKeyboardDeviceQueueReadLock);												// Unlock!
 }
 
 Void RawKeyboardDeviceInit(Void) {

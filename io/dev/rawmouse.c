@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 19 of 2018, at 21:40 BRT
-// Last edited on December 14 of 2018, at 15:16 BRT
+// Last edited on December 14 of 2018, at 18:27 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -10,7 +10,8 @@
 #include <chicago/queue.h>
 
 Queue RawMouseDeviceQueue;
-Lock RawMouseDeviceQueueLock = { False, Null };
+Lock RawMouseDeviceQueueReadLock = { False, Null };
+Lock RawMouseDeviceQueueWriteLock = { False, Null };
 
 static Boolean RawMouseDeviceReadInt(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 	(Void)dev; (Void)off;
@@ -19,14 +20,14 @@ static Boolean RawMouseDeviceReadInt(PDevice dev, UIntPtr off, UIntPtr len, PUIn
 }
 
 Void RawMouseDeviceWrite(Int8 offx, Int8 offy, UInt8 buttons) {
-	PsLock(&RawMouseDeviceQueueLock);														// Lock
+	PsLock(&RawMouseDeviceQueueWriteLock);													// Lock
 	
 	while (RawMouseDeviceQueue.length >= 1024) {											// Don't let the queue grow too much
 		QueueRemove(&RawMouseDeviceQueue);
 	}
 	
 	QueueAdd(&RawMouseDeviceQueue, (PVoid)(offx | (offy << 8) | (buttons << 16)));			// Add to the queue
-	PsUnlock(&RawMouseDeviceQueueLock);														// Unlock!
+	PsUnlock(&RawMouseDeviceQueueWriteLock);												// Unlock!
 }
 
 Void RawMouseDeviceRead(UIntPtr len, PUInt8 buf) {
@@ -38,7 +39,7 @@ Void RawMouseDeviceRead(UIntPtr len, PUInt8 buf) {
 		PsSwitchTask(Null);
 	}
 	
-	PsLock(&RawMouseDeviceQueueLock);														// Lock
+	PsLock(&RawMouseDeviceQueueReadLock);													// Lock
 	
 	for (UIntPtr i = 0; i < len; i++) {														// Fill the buffer!
 		UIntPtr cmd = (UIntPtr)QueueRemove(&RawMouseDeviceQueue);
@@ -48,7 +49,7 @@ Void RawMouseDeviceRead(UIntPtr len, PUInt8 buf) {
 		buf[i * 3 + 2] = (UInt8)((cmd >> 16) & 0xFF);
 	}
 	
-	PsUnlock(&RawMouseDeviceQueueLock);														// Unlock!
+	PsUnlock(&RawMouseDeviceQueueReadLock);													// Unlock!
 }
 
 Void RawMouseDeviceInit(Void) {

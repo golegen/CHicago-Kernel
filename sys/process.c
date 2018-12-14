@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:59 BRT
-// Last edited on December 14 of 2018, at 15:19 BRT
+// Last edited on December 14 of 2018, at 17:56 BRT
 
 #define __CHICAGO_PROCESS__
 
@@ -47,7 +47,7 @@ PThread PsCreateThreadInt(UIntPtr entry, UIntPtr userstack, Boolean user) {
 	
 	th->id = 0;																																	// We're going to set the id and the parent process later
 	th->retv = 0;
-	th->time = PS_DEFAULT_QUANTUM;																												// Set the default quantum
+	th->time = PS_DEFAULT_QUANTUM - 1;																											// Set the default quantum
 	th->wtime = 0;																																// We're not waiting anything (for now)
 	th->parent = Null;																															// No parent (for now)
 	th->waitl = Null;																															// We're not waiting anything (for now)
@@ -218,7 +218,7 @@ Void PsSleep(UIntPtr ms) {
 		return;
 	}
 	
-	PsCurrentThread->wtime = ms;
+	PsCurrentThread->wtime = ms - 1;
 	
 	PsUnlockTaskSwitch(old);																													// Unlock
 	PsSwitchTask(PsDontRequeue);																												// Remove it from the queue and go to the next thread
@@ -560,7 +560,7 @@ Void PsWakeup(PList list, PThread th) {
 	
 	ListRemove(list, idx);																														// Remove th from list
 	
-	th->time = PS_DEFAULT_QUANTUM;																												// Let's queue it back!
+	th->time = PS_DEFAULT_QUANTUM - 1;																											// Let's queue it back!
 	th->wtime = 0;
 	th->waitl = Null;
 	th->waitt = Null;

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 13 of 2018, at 16:17 BRT
+// Last edited on December 15 of 2018, at 16:02 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -368,7 +368,7 @@ static Void ShellMain(Void) {
 			DispRefresh();																																// Refresh the screen
 			ConSetRefresh(True);																														// Enable screen refresh
 		} else if (StrGetLength(argv[0]) == 0) {
-			ConWriteFormated(L"\r\n\r\n");																												// No command :)
+			ConWriteFormated(L"\r\n");																													// No command :)
 		} else {
 			ConWriteFormated(NlsGetMessage(NLS_SHELL_INVALID), argv[0]);																				// Invalid command!
 		}

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 07 of 2018, at 10:41 BRT
-// Last edited on December 14 of 2018, at 15:15 BRT
+// Last edited on December 14 of 2018, at 18:28 BRT
 
 #include <chicago/console.h>
 #include <chicago/debug.h>
@@ -10,7 +10,8 @@
 #include <chicago/process.h>
 
 Queue ConsoleDeviceKeyboardQueue;
-Lock ConsoleDeviceKeyboardQueueLock = { False, Null };
+Lock ConsoleDeviceKeyboardQueueReadLock = { False, Null };
+Lock ConsoleDeviceKeyboardQueueWriteLock = { False, Null };
 
 Void ConsoleDeviceReadKeyboard(UIntPtr len, PWChar buf) {
 	if (len == 0) {
@@ -26,7 +27,7 @@ Void ConsoleDeviceReadKeyboard(UIntPtr len, PWChar buf) {
 		PsSwitchTask(Null);
 	}
 	
-	PsLock(&ConsoleDeviceKeyboardQueueLock);																		// Lock
+	PsLock(&ConsoleDeviceKeyboardQueueReadLock);																	// Lock
 	
 	UIntPtr alen = ConsoleDeviceKeyboardQueue.length;																// Save the avaliable length
 	
@@ -40,38 +41,38 @@ Void ConsoleDeviceReadKeyboard(UIntPtr len, PWChar buf) {
 		buf[len] = 0;
 	}
 	
-	PsUnlock(&ConsoleDeviceKeyboardQueueLock);																		// Unlock!
+	PsUnlock(&ConsoleDeviceKeyboardQueueReadLock);																	// Unlock!
 }
 
 Void ConsoleDeviceWriteKeyboard(Char data) {
-	PsLock(&ConsoleDeviceKeyboardQueueLock);																		// Lock
+	PsLock(&ConsoleDeviceKeyboardQueueWriteLock);																	// Lock
 	QueueAdd(&ConsoleDeviceKeyboardQueue, (PVoid)data);																// Add to the queue
-	PsUnlock(&ConsoleDeviceKeyboardQueueLock);																		// Unlock!
+	PsUnlock(&ConsoleDeviceKeyboardQueueWriteLock);																	// Unlock!
 }
 
 Boolean ConsoleDeviceBackKeyboard(Void) {
 	Boolean ret = False;
 	
-	PsLock(&ConsoleDeviceKeyboardQueueLock);																		// Lock
+	PsLock(&ConsoleDeviceKeyboardQueueReadLock);																	// Lock
 	
 	if (ConsoleDeviceKeyboardQueue.length != 0) {																	// We can do it?
 		ListRemove(&ConsoleDeviceKeyboardQueue, 0);																	// Yes, remove the first entry!
 		ret = True;
 	}
 	
-	PsUnlock(&ConsoleDeviceKeyboardQueueLock);																		// Unlock!
+	PsUnlock(&ConsoleDeviceKeyboardQueueReadLock);																	// Unlock!
 	
 	return ret;
 }
 
 Void ConsoleDeviceClearKeyboard(Void) {
-	PsLock(&ConsoleDeviceKeyboardQueueLock);																		// Lock
+	PsLock(&ConsoleDeviceKeyboardQueueReadLock);																	// Lock
 	
 	while (ConsoleDeviceKeyboardQueue.length != 0) {																// Clean!
 		QueueRemove(&ConsoleDeviceKeyboardQueue);
 	}
 	
-	PsUnlock(&ConsoleDeviceKeyboardQueueLock);																		// Unlock!
+	PsUnlock(&ConsoleDeviceKeyboardQueueReadLock);																	// Unlock!
 }
 
 Boolean ConsoleDeviceRead(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
