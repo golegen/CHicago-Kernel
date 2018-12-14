@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:27 BRT
-// Last edited on December 13 of 2018, at 18:05 BRT
+// Last edited on December 14 of 2018, at 18:34 BRT
 
 #include <chicago/types.h>
 
@@ -49,7 +49,7 @@ PWChar NlsMessagesEn[] = {
 	
 	L"<Unamed>",
 	
-	L"Name: %s | ID: %d | Memory Usage: %d %s\r\n%s",
+	L"Name: %s | ID: %d | Threads: %d | Memory Usage: %d %s\r\n%s",
 	
 	L"Usage: %s [device] [ipv4]\r\n\r\n",
 	

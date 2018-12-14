@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 15 of 2018, at 16:02 BRT
+// Last edited on December 14 of 2018, at 18:33 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -321,8 +321,9 @@ static Void ShellMain(Void) {
 				PProcess proc = (PProcess)i->data;
 				PWChar name = proc->name == Null ? NlsGetMessage(NLS_SHELL_PS_UNAMED) : proc->name;
 				UIntPtr usage = proc->mem_usage + (proc->id == 0 ? HeapGetCurrent() - HeapGetStart() : 0);
+				UIntPtr ths = proc->threads->length;
 				
-				ConWriteFormated(NlsGetMessage(NLS_SHELL_PS), name, proc->id, BVal(usage), BStr(usage), i->next == Null ? L"\r\n" : L"");
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_PS), name, proc->id, ths, BVal(usage), BStr(usage), i->next == Null ? L"\r\n" : L"");
 			}
 			
 			DispRefresh();																																// Refresh the screen

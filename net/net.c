@@ -1,12 +1,15 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:36 BRT
-// Last edited on December 13 of 2018, at 16:24 BRT
+// Last edited on December 14 of 2018, at 19:10 BRT
 
 #include <chicago/alloc.h>
+#include <chicago/debug.h>
 #include <chicago/device.h>
 #include <chicago/mm.h>
 #include <chicago/net.h>
+#include <chicago/panic.h>
+#include <chicago/process.h>
 #include <chicago/string.h>
 
 PWChar NetDeviceString = L"NetworkX";
@@ -58,13 +61,27 @@ PNetworkDevice NetAddDevice(PVoid priv, UInt8 mac[6], Void (*send)(PVoid, UIntPt
 	dev->id = NetLastID++;																															// Set the id
 	dev->priv = priv;																																// The private data
 	
-	StrSetMemory(dev->ipv4_address, 0, 4);																											// For now we don't have a IPv4 address :(
 	StrCopyMemory(dev->mac_address, mac, 6);																										// The mac address
+	StrSetMemory(dev->ipv4_address, 0, 4);																											// For now we don't have a IPv4 address :(
 	
 	dev->send = send;																																// And the send function
+	dev->packet_queue = QueueNew(False);																											// Create the packet queue
+	
+	if (dev->packet_queue == Null) {
+		MemFree((UIntPtr)dev);																														// Failed, free the device
+		NetLastID--;																																// And "free" the id
+		return Null;
+	}
+	
+	dev->packet_queue->free = True;																													// The QueueFree function should free all the packets in the queue, not only the queue
+	dev->packet_queue_rlock.locked = False;																											// Init the packet queue locks
+	dev->packet_queue_rlock.owner = Null;
+	dev->packet_queue_wlock.locked = False;
+	dev->packet_queue_wlock.owner = Null;
 	
 	if (!ListAdd(NetDevices, dev)) {																												// Try to add!
-		MemFree((UIntPtr)dev);																														// Failed, free the device
+		QueueFree(dev->packet_queue);																												// Failed, free the packet queue
+		MemFree((UIntPtr)dev);																														// Free the device
 		NetLastID--;																																// And "free" the id
 		return Null;
 	}
@@ -119,69 +136,34 @@ Void NetRemoveDevice(PNetworkDevice dev) {
 	
 	ListRemove(NetDevices, idx);																													// Remove it from the net devices list
 	FsRemoveDevice(dev->dev_name);																													// Remove it from the device list
+	QueueFree(dev->packet_queue);																													// Free the packet queue
 	MemFree((UIntPtr)dev);																															// And free the device
 }
 
-static Void NetHandleARPPacket(PNetworkDevice dev, PARPHeader hdr) {
-	if ((dev == Null) || (hdr == Null)) {																											// Sanity checks
-		return;
-	} else if (hdr->htype == ToNetByteOrder16(hdr->htype)) {
-		return;
-	} else if (FromNetByteOrder16(hdr->ptype) != ETH_TYPE_IP) {
+Void NetDevicePushPacket(PNetworkDevice dev, PUInt8 packet) {
+	if ((dev == Null) || (packet == Null)) {																										// Sanity checks
 		return;
 	}
 	
-	if (StrCompareMemory(dev->ipv4_address, hdr->ipv4.dst_pr, 4)) {																					// For us?
-		if (hdr->opcode == FromNetByteOrder16(ARP_OPC_REQUEST)) {																					// Yes, was a request?
-			NetSendARPIPv4Packet(dev, hdr->ipv4.src_hw, hdr->ipv4.src_pr, ARP_OPC_REPLY);															// Yes, so let's reply :)
-		} else if ((hdr->opcode == FromNetByteOrder16(ARP_OPC_REPLY)) && (NetARPIPv4Sockets != Null)) {												// Reply?
-			ListForeach(NetARPIPv4Sockets, i) {																										// Yes, let's see if any process want it!
-				PARPIPv4Socket sock = (PARPIPv4Socket)i->data;
-				
-				if (StrCompareMemory(sock->ipv4_address, hdr->ipv4.src_pr, 4)) {
-					PsLockTaskSwitch(old);																											// Ok, lock task switch
-					UIntPtr oldpd = MmGetCurrentDirectory();
-					
-					if (sock->user && (oldpd != sock->owner_process->dir)) {																		// We need to switch to another dir?
-						MmSwitchDirectory(sock->owner_process->dir);																				// Yes
-					}
-					
-					PARPHeader new = (PARPHeader)(sock->user ? MmAllocUserMemory(sizeof(ARPHeader)) : MemAllocate(sizeof(ARPHeader)));				// Alloc some space for copying the arp data
-					
-					if (new != Null) {
-						StrCopyMemory(new, hdr, sizeof(ARPHeader));																					// Ok, copy it and add it to the queue
-						QueueAdd(sock->packet_queue, new);
-					}
-					
-					if (sock->user && (oldpd != sock->owner_process->dir)) {																		// We need to switch back?
-						MmSwitchDirectory(oldpd);																									// Yes
-					}
-					
-					PsUnlockTaskSwitch(old);
-				}
-			}
-		}
-	}
+	PsLock(&dev->packet_queue_wlock);																												// Lock
+	QueueAdd(dev->packet_queue, packet);																											// Add this packet
+	PsUnlock(&dev->packet_queue_rlock);																												// Unlock
 }
 
-static Void NetHandleEthPacket(PNetworkDevice dev, UInt8 src[6], UInt16 type, UIntPtr len, PUInt8 buf) {
-	if ((dev == Null) || (src == Null) || (len == 0) || (buf == Null)) {																			// Sanity checks
-		return;
+PUInt8 NetDevicePopPacket(PNetworkDevice dev) {
+	if (dev == Null) {																																// Sanity checks
+		return Null;
 	}
 	
-	if (type == ETH_TYPE_ARP) {																														// ARP?
-		NetHandleARPPacket(dev, (PARPHeader)buf);																									// Yes, handle it!
-	}
-}
-
-Void NetHandlePacket(PNetworkDevice dev, UIntPtr len, PUInt8 buf) {
-	if ((dev == Null) || (len < sizeof(EthFrame)) || (buf == Null)) {																				// Sanity checks
-		return;
+	while (dev->packet_queue->length == 0) {																										// Let's wait for a packet
+		PsSwitchTask(Null);
 	}
 	
-	PEthFrame frame = (PEthFrame)buf;
+	PsLock(&dev->packet_queue_rlock);																												// Lock
+	PUInt8 data = (PUInt8)QueueRemove(dev->packet_queue);																							// Get our return value
+	PsUnlock(&dev->packet_queue_rlock);																												// Unlock
 	
-	NetHandleEthPacket(dev, frame->src, FromNetByteOrder16(frame->type), len - sizeof(EthFrame), buf + sizeof(EthFrame));							// Handle this eth packet
+	return data;
 }
 
 Void NetSendRawPacket(PNetworkDevice dev, UIntPtr len, PUInt8 buf) {
@@ -338,4 +320,83 @@ PARPHeader NetReceiveARPIPv4Socket(PARPIPv4Socket sock) {
 	}
 	
 	return (PARPHeader)QueueRemove(sock->packet_queue);																								// Now, return it!
+}
+
+static Void NetHandleARPPacket(PNetworkDevice dev, PARPHeader hdr) {
+	if ((dev == Null) || (hdr == Null)) {																											// Sanity checks
+		return;
+	} else if (hdr->htype == ToNetByteOrder16(hdr->htype)) {
+		return;
+	} else if (FromNetByteOrder16(hdr->ptype) != ETH_TYPE_IP) {
+		return;
+	}
+	
+	if (StrCompareMemory(dev->ipv4_address, hdr->ipv4.dst_pr, 4)) {																					// For us?
+		if (hdr->opcode == FromNetByteOrder16(ARP_OPC_REQUEST)) {																					// Yes, was a request?
+			NetSendARPIPv4Packet(dev, hdr->ipv4.src_hw, hdr->ipv4.src_pr, ARP_OPC_REPLY);															// Yes, so let's reply :)
+		} else if ((hdr->opcode == FromNetByteOrder16(ARP_OPC_REPLY)) && (NetARPIPv4Sockets != Null)) {												// Reply?
+			ListForeach(NetARPIPv4Sockets, i) {																										// Yes, let's see if any process want it!
+				PARPIPv4Socket sock = (PARPIPv4Socket)i->data;
+				
+				if (StrCompareMemory(sock->ipv4_address, hdr->ipv4.src_pr, 4)) {
+					PsLockTaskSwitch(old);																											// Ok, lock task switch
+					UIntPtr oldpd = MmGetCurrentDirectory();
+					
+					if (sock->user && (oldpd != sock->owner_process->dir)) {																		// We need to switch to another dir?
+						MmSwitchDirectory(sock->owner_process->dir);																				// Yes
+					}
+					
+					PARPHeader new = (PARPHeader)(sock->user ? MmAllocUserMemory(sizeof(ARPHeader)) : MemAllocate(sizeof(ARPHeader)));				// Alloc some space for copying the arp data
+					
+					if (new != Null) {
+						StrCopyMemory(new, hdr, sizeof(ARPHeader));																					// Ok, copy it and add it to the queue
+						QueueAdd(sock->packet_queue, new);
+					}
+					
+					if (sock->user && (oldpd != sock->owner_process->dir)) {																		// We need to switch back?
+						MmSwitchDirectory(oldpd);																									// Yes
+					}
+					
+					PsUnlockTaskSwitch(old);
+				}
+			}
+		}
+	}
+}
+
+static Void NetHandleEthPacket(PNetworkDevice dev, UInt8 src[6], UInt16 type, PUInt8 buf) {
+	if ((dev == Null) || (src == Null) || (buf == Null)) {																							// Sanity checks
+		return;
+	}
+	
+	if (type == ETH_TYPE_ARP) {																														// ARP?
+		NetHandleARPPacket(dev, (PARPHeader)buf);																									// Yes, handle it!
+	}
+}
+
+static Void NetThread(Void) {
+	PNetworkDevice dev = (PNetworkDevice)PsCurrentThread->retv;																						// *HACK WARNING* The network device is in the retv
+	
+	while (True) {
+		PEthFrame packet = (PEthFrame)NetDevicePopPacket(dev);																						// Wait for a packet to handle
+		NetHandleEthPacket(dev, packet->src, FromNetByteOrder16(packet->type), ((PUInt8)packet) + sizeof(EthFrame));								// Handle
+		MemFree((UIntPtr)packet);																													// Free
+	}
+}
+
+Void NetFinish(Void) {
+	if (NetDevices != Null) {																														// Create the network threads?
+		ListForeach(NetDevices, i) {																												// Yes, let's do it!
+			PThread th = (PThread)PsCreateThread((UIntPtr)NetThread, 0, False);																		// Create the handler thread
+			
+			if (th == Null) {
+				DbgWriteFormated("PANIC! Couldn't create the network thread\r\n");																	// Failed :(
+				Panic(PANIC_KERNEL_INIT_FAILED);
+			}
+			
+			th->retv = (UIntPtr)i->data;																											// *HACK WARNING* As we don't have anyway to pass arguments to the thread, use the retv to indicate the network device that this thread should handle
+			
+			PsAddThread(th);																														// Add it!
+		}
+	}
 }

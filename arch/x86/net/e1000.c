@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 19:40 BRT
-// Last edited on December 14 of 2018, at 13:27 BRT
+// Last edited on December 14 of 2018, at 19:12 BRT
 
 #include <chicago/arch/e1000.h>
 #include <chicago/arch/pci.h>
@@ -83,7 +83,12 @@ static Void E1000Handler(PVoid priv) {
 			UInt16 old = dev->rx_cur;
 			UIntPtr len = dev->rx_descs[old].length;
 			
-			NetHandlePacket(dev->ndev, len, (PUInt8)dev->rx_descs_virt[old]);		// Our Net layer should handle it
+			PUInt8 buf = (PUInt8)MemAllocate(len);									// Try to alloc some space
+			
+			if (buf != Null) {
+				StrCopyMemory(buf, (PUInt8)dev->rx_descs_virt[old], len);			// Ok, copy the data
+				NetDevicePushPacket(dev->ndev, buf);								// And now our net layer should handle it!
+			}
 			
 			dev->rx_descs[old].status = 0;
 			dev->rx_cur = (dev->rx_cur + 1) % 32;

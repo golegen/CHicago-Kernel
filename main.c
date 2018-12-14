@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on December 14 of 2018, at 18:05 BRT
+// Last edited on December 14 of 2018, at 18:57 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -9,6 +9,7 @@
 #include <chicago/display.h>
 #include <chicago/file.h>
 #include <chicago/ipc.h>
+#include <chicago/net.h>
 #include <chicago/nls.h>
 #include <chicago/panic.h>
 #include <chicago/shell.h>
@@ -69,6 +70,7 @@ Void KernelMainLate(Void) {
 	DbgWriteFormated("[Kernel] IPC initialized\r\n");
 	
 	ArchFinishKeyboard();																									// Now we can start handling the keyboard!
+	NetFinish();																											// And start handling the network packets
 	DispFillProgressBar();																									// Kernel initialized
 	DbgWriteFormated("[Kernel] Kernel initialized\r\n\r\n");
 	
