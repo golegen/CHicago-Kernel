@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:59 BRT
-// Last edited on December 14 of 2018, at 17:56 BRT
+// Last edited on December 15 of 2018, at 00:00 BRT
 
 #define __CHICAGO_PROCESS__
 
@@ -10,6 +10,7 @@
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
 #include <chicago/debug.h>
+#include <chicago/ipc.h>
 #include <chicago/mm.h>
 #include <chicago/panic.h>
 #include <chicago/process.h>
@@ -450,10 +451,7 @@ Void PsExitProcess(UIntPtr ret) {
 				for (PListNode j = PsWaitpList->tail; j != Null; j = j->prev) {
 					PThread th2 = (PThread)j->data;
 
-					if (th2->waitp == PsCurrentProcess) {																						// Found any thread waiting THIS PROCESS?
-						th2->retv = ret;																										// Yes, wakeup!
-						PsWakeup(PsWaitpList, th2);
-					} else if (th2 == th) {																										// Found THIS THREAD?
+					if (th2 == th) {																											// Found THIS THREAD?
 						PsWakeup2(PsWaitpList, th);																								// Yes
 					}
 
@@ -496,12 +494,22 @@ Void PsExitProcess(UIntPtr ret) {
 			PThread th = (PThread)j->data;
 			
 			if (th->waitp == PsCurrentProcess) {																								// Found any thread waiting THIS PROCESS?
-				th->retv = ret;																												// Yes, wakeup!
+				th->retv = ret;																													// Yes, wakeup!
 				PsWakeup(PsWaitpList, th);
 			}
 	
 			if (j == PsWaitpList->head) {
 				break;
+			}
+		}
+	}
+	
+	if (IpcPortList != Null) {																													// Let's remove any ipc port that this process created
+		ListForeach(IpcPortList, i) {
+			PIpcPort port = (PIpcPort)i->data;
+			
+			if (port->proc == PsCurrentProcess) {																								// Found?
+				IpcRemovePort(port->name);																										// Yes, remove it
 			}
 		}
 	}

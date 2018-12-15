@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 15 of 2018, at 22:17 BRT
-// Last edited on December 09 of 2018, at 16:58 BRT
+// Last edited on December 15 of 2018, at 09:08 BRT
 
 #ifndef __CHICAGO_IPC_H__
 #define __CHICAGO_IPC_H__
@@ -11,7 +11,7 @@
 
 typedef struct {
 	UInt32 msg;
-	PProcess src;
+	UIntPtr src;
 	UIntPtr size;
 	PUInt8 buffer;
 } IpcMessage, *PIpcMessage;
@@ -21,6 +21,10 @@ typedef struct {
 	Queue queue;
 	PProcess proc;
 } IpcPort, *PIpcPort;
+
+#ifndef __CHICAGO_IPC__
+extern PList IpcPortList;
+#endif
 
 PIpcPort IpcCreatePort(PWChar name);
 Void IpcRemovePort(PWChar name);

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 00:48 BRT
-// Last edited on December 14 of 2018, at 15:22 BRT
+// Last edited on December 14 of 2018, at 23:55 BRT
 
 #include <chicago/arch/idt.h>
 #include <chicago/sc.h>
@@ -142,6 +142,22 @@ Void ArchScHandler(PRegisters regs) {
 	}
 	case 0x21: {																						// Boolean FsSetPosition(IntPtr file, IntPtr base, UIntPtr off)
 		ScFsSetPosition(regs->ebx, regs->ecx, regs->edx);
+		break;
+	}
+	case 0x22: {																						// Boolean IpcCreatePort(PWChar name)
+		regs->eax = ScIpcCreatePort((PWChar)regs->ebx);
+		break;
+	}
+	case 0x23: {																						// Void IpcRemovePort(PWChar name)
+		ScIpcRemovePort((PWChar)regs->ebx);
+		break;
+	}
+	case 0x24: {																						// Void IpcSendMessage(PWChar port, UInt32 msg, UIntPtr size, PUInt8 buf)
+		ScIpcSendMessage((PWChar)regs->ebx, regs->ecx, regs->edx, (PUInt8)regs->esi);
+		break;
+	}
+	case 0x25: {																						// PIpcMessage IpcReceiveMessage(PWChar name)
+		regs->eax = (UIntPtr)ScIpcReceiveMessage((PWChar)regs->ebx);
 		break;
 	}
 	default: {

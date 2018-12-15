@@ -1,7 +1,9 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 15 of 2018, at 22:20 BRT
-// Last edited on December 09 of 2018, at 17:08 BRT
+// Last edited on December 15 of 2018, at 09:07 BRT
+
+#define __CHICAGO_IPC__
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -99,21 +101,47 @@ Void IpcSendMessage(PWChar name, UInt32 msg, UIntPtr size, PUInt8 buf) {
 		return;																			// Port not found...
 	}
 	
+#if (MM_USER_START == 0)																// Let's fix an compiler warning :)
+	if (((UIntPtr)buf) < MM_USER_END) {													// Check if the buffer is inside of the userspace!
+#else
+	if ((((UIntPtr)buf) >= MM_USER_START) && (((UIntPtr)buf) < MM_USER_END)) {			// Same as above
+#endif
+		PUInt8 new = (PUInt8)MemAllocate(size);											// Yes, let's copy it to the kernelspace
+		
+		if (new == Null) {
+			return;																		// Failed...
+		}
+		
+		StrCopyMemory(new, buf, size);													// Copy it
+		buf = new;																		// And set the new buffer
+	}
+	
 	PsLockTaskSwitch(old);																// Lock
 	MmSwitchDirectory(port->proc->dir);													// Switch to the dir of the owner of this port
 	
-	PIpcMessage mes = (PIpcMessage)MmAllocUserMemory(sizeof(IpcMessage));				// Alloc space for the message struct
+	PUInt8 new = (PUInt8)MmAllocUserMemory(size);										// Alloc the new buffer in the target process userspace
 	
-	if (mes == Null) {
+	if (new == Null) {
 		MmSwitchDirectory(PsCurrentProcess->dir);										// Failed
 		PsUnlockTaskSwitch(old);
 		return;
 	}
 	
+	StrCopyMemory(new, buf, size);														// Copy the data from the old buffer to the new one
+	
+	PIpcMessage mes = (PIpcMessage)MmAllocUserMemory(sizeof(IpcMessage));				// Alloc space for the message struct
+	
+	if (mes == Null) {
+		MmFreeUserMemory((UIntPtr)new);													// Failed
+		MmSwitchDirectory(PsCurrentProcess->dir);
+		PsUnlockTaskSwitch(old);
+		return;
+	}
+	
 	mes->msg = msg;																		// Setup it
-	mes->src = PsCurrentProcess;
+	mes->src = PsCurrentProcess->id;
 	mes->size = size;
-	mes->buffer = buf;
+	mes->buffer = new;
 	
 	QueueAdd(&port->queue, mes);														// Add to the msg queue
 	MmSwitchDirectory(PsCurrentProcess->dir);											// Switch back to the old dir

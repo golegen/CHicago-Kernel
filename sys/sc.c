@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 01:14 BRT
-// Last edited on December 14 of 2018, at 15:21 BRT
+// Last edited on December 14 of 2018, at 23:51 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/mm.h>
@@ -12,9 +12,9 @@
 
 static Boolean ScCheckPointer(PVoid ptr) {
 #if (MM_USER_START == 0)																																	// Let's fix an compiler warning :)
-	if (((UIntPtr)ptr) >= MM_USER_END) {																													// Check if the pointer is inside of the userspace!
+	if ((ptr == Null) || (((UIntPtr)ptr) >= MM_USER_END)) {																									// Check if the pointer is inside of the userspace!
 #else
-	if (((UIntPtr)ptr) < MM_USER_START || ((UIntPtr)ptr) >= MM_USER_END) {																					// Same as above
+	if ((ptr == Null) || ((UIntPtr)ptr) < MM_USER_START || ((UIntPtr)ptr) >= MM_USER_END) {																	// Same as above
 #endif
 		return False;
 	} else {
@@ -360,5 +360,33 @@ Void ScFsSetPosition(IntPtr file, UIntPtr base, UIntPtr off) {
 		} else if (base == 2) {																																// Base = File End
 			node->offset = node->length + off;
 		}
+	}
+}
+	
+Boolean ScIpcCreatePort(PWChar name) {
+	if (!ScCheckPointer(name)) {																															// Sanity checks
+		return False;
+	} else {
+		return IpcCreatePort(name) != Null;																													// Just redirect
+	}
+}
+
+Void ScIpcRemovePort(PWChar name) {
+	if (ScCheckPointer(name)) {																																// Sanity checks
+		IpcRemovePort(name);																																// Just redirect
+	}
+}
+
+Void ScIpcSendMessage(PWChar port, UInt32 msg, UIntPtr size, PUInt8 buf) {
+	if (ScCheckPointer(port) && ScCheckPointer(buf)) {																										// Sanity checks
+		IpcSendMessage(port, msg, size, buf);																												// Just redirect
+	}
+}
+
+PIpcMessage ScIpcReceiveMessage(PWChar name) {
+	if (!ScCheckPointer(name)) {																															// Sanity checks
+		return Null;
+	} else {
+		return IpcReceiveMessage(name);																														// Just redirect
 	}
 }

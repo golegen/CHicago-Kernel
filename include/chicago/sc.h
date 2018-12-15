@@ -1,12 +1,13 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 16 of 2018, at 01:04 BRT
-// Last edited on December 14 of 2018, at 15:19 BRT
+// Last edited on December 14 of 2018, at 23:45 BRT
 
 #ifndef __CHICAGO_SC_H__
 #define __CHICAGO_SC_H__
 
 #include <chicago/file.h>
+#include <chicago/ipc.h>
 #include <chicago/process.h>
 
 typedef struct {
@@ -51,5 +52,9 @@ Boolean ScFsControlFile(IntPtr file, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf);
 UIntPtr ScFsGetFileSize(IntPtr file);
 UIntPtr ScFsGetPosition(IntPtr file);
 Void ScFsSetPosition(IntPtr file, UIntPtr base, UIntPtr off);
+Boolean ScIpcCreatePort(PWChar name);
+Void ScIpcRemovePort(PWChar name);
+Void ScIpcSendMessage(PWChar port, UInt32 msg, UIntPtr size, PUInt8 buf);
+PIpcMessage ScIpcReceiveMessage(PWChar name);
 
 #endif		// __CHICAGO_SC_H__
