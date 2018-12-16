@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 12 of 2018, at 23:10 BRT
-// Last edited on December 16 of 2018, at 13:50 BRT
+// Last edited on December 16 of 2018, at 14:57 BRT
 
 #include <chicago/arch/idt.h>
 #include <chicago/arch/port.h>
@@ -14,6 +14,7 @@
 
 static Boolean KbdCtrl = False;
 static Boolean KbdShft = False;
+static Boolean KbdCaps = False;
 static Boolean KbdAlt = False;
 
 static Char KbdKeymapNormal[128] = {
@@ -53,14 +54,17 @@ static Void KeyboardThread(Void) {
 			} else if (sc == 0x9D) {																// Control?
 				KbdCtrl = !KbdCtrl;
 			}
-		} else if ((sc == 0x2A) || (sc == 0x36) || (sc == 0x3A)) {									// Shift (key press)?
+		} else if ((sc == 0x2A) || (sc == 0x36)) {													// Shift (key press)?
 			KbdShft = !KbdShft;
+		} else if (sc == 0x3A) {																	// Caps Lock?
+			KbdCaps = !KbdCaps;
 		} else if (sc == 0x38) {																	// Alt (key press)?
 			KbdAlt  = !KbdAlt;
 		} else if (sc == 0x1D) {																	// Control (key press)?
 			KbdCtrl = !KbdCtrl;
 		} else {
-			Char ch = KbdShft ? KbdKeymapShift[sc] : KbdKeymapNormal[sc];							// Ok, it's a normal key... get the character from the keymap
+			Boolean shft = KbdShft ^ KbdCaps;
+			Char ch = shft ? KbdKeymapShift[sc] : KbdKeymapNormal[sc];							// Ok, it's a normal key... get the character from the keymap
 
 			if (ch == '\b') {																		// Backspace?
 				if (ConsoleDeviceBackKeyboard()) {													// Yes, do it!
@@ -69,7 +73,7 @@ static Void KeyboardThread(Void) {
 			} else if (ch == '\n') {																// New line?
 				ConsoleDeviceWriteKeyboard(ch);														// Yes, convert the \n to \r\n
 				ConWriteFormated(L"\r\n");
-			} else if ((ch != '\t') && (KbdCtrl && KbdShft)) {										// Control+Key (with shift)?
+			} else if ((ch != '\t') && (KbdCtrl && shft)) {											// Control+Key (with shift)?
 				ConsoleDeviceWriteKeyboard(ch - 'A');												// Yes
 				ConWriteFormated(L"^%c", ch);
 			} else if (ch != '\t' && KbdCtrl) {														// Control+Key (without shift)?
