@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:36 BRT
-// Last edited on December 15 of 2018, at 20:57 BRT
+// Last edited on December 15 of 2018, at 21:36 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -14,6 +14,7 @@
 
 PWChar NetDeviceString = L"NetworkX";
 PList NetARPIPv4Sockets = Null;
+PList NetUDPSockets = Null;
 PList NetDevices = Null;
 UIntPtr NetLastID = 0;
 
@@ -328,6 +329,26 @@ Void NetSendIPv4Packet(PNetworkDevice dev, UInt8 dest[4], UInt8 protocol, UIntPt
 	MemFree((UIntPtr)hdr);																															// And free everything
 }
 
+Void NetSendUDPPacket(PNetworkDevice dev, UInt8 dest[4], UInt16 port, UIntPtr len, PUInt8 buf) {
+	if ((dev == Null) || (dest == Null)) {																											// Sanity checks
+		return;
+	}
+	
+	PUDPHeader hdr = (PUDPHeader)MemAllocate(sizeof(UDPHeader) + len);																				// Let's build our UDP header
+	
+	if (hdr == Null) {
+		return;																																		// Failed :(
+	}
+	
+	hdr->sport = hdr->dport = ToNetByteOrder16(port);																								// Set the port
+	hdr->length = ToNetByteOrder16(((UInt16)len));																									// Set the data length
+	hdr->checksum = 0;																																// I still need to implement the UDP checksum calculation...
+	
+	StrCopyMemory(((PUInt8)hdr) + sizeof(UDPHeader), buf, len);																						// Copy the data
+	NetSendIPv4Packet(dev, dest, IP_PROTOCOL_UDP, sizeof(UDPHeader) + len, (PUInt8)hdr);															// Send!
+	MemFree((UIntPtr)hdr);
+}
+
 PARPIPv4Socket NetAddARPIPv4Socket(PNetworkDevice dev, UInt8 mac[6], UInt8 ipv4[4], Boolean user) {
 	if (NetARPIPv4Sockets == Null) {																												// Init the ARP IPv4 socket list?
 		NetARPIPv4Sockets = ListNew(False, False);																									// Yes :)
@@ -428,6 +449,107 @@ PARPHeader NetReceiveARPIPv4Socket(PARPIPv4Socket sock) {
 	}
 	
 	return (PARPHeader)QueueRemove(sock->packet_queue);																								// Now, return it!
+}
+
+PUDPSocket NetAddUDPSocket(PNetworkDevice dev, UInt8 ipv4[4], UInt8 port, Boolean user) {
+	if (NetUDPSockets == Null) {																													// Init the UDP socket list?
+		NetUDPSockets = ListNew(False, False);																										// Yes :)
+		
+		if (NetUDPSockets == Null) {
+			return Null;																															// Failed :(
+		}
+	}
+	
+	if ((PsCurrentThread == Null) || (PsCurrentProcess == Null) || (dev == Null) || (ipv4 == Null)) {												// Sanity checks
+		return Null;
+	}
+	
+	PUDPSocket sock = (PUDPSocket)MemAllocate(sizeof(UDPSocket));																					// Let's create our socket
+	
+	if (sock == Null) {
+		return Null;
+	}
+	
+	sock->port = port;																																// Set the port
+	sock->user = user;																																// Set if this is a user socket
+	sock->dev = dev;																																// Set our device
+	sock->packet_queue = QueueNew(user);																											// Create our packet queue
+	
+	if (sock->packet_queue == Null) {
+		MemFree((UIntPtr)sock);																														// Failed
+		return Null;
+	}
+	
+	StrCopyMemory(sock->ipv4_address, ipv4, 4);																										// Set the dest ipv4 address
+	
+	sock->owner_process = PsCurrentProcess;																											// And the owner process!
+	
+	if (!ListAdd(NetUDPSockets, sock)) {																											// Now, try to add it to the UDP socket list!
+		QueueFree(sock->packet_queue);																												// Failed :(
+		MemFree((UIntPtr)sock);
+		return Null;
+	}
+	
+	return sock;
+}
+
+Void NetRemoveUDPSocket(PUDPSocket sock) {
+	if ((PsCurrentThread == Null) || (PsCurrentProcess == Null) || (NetUDPSockets == Null) || (sock == Null)) {										// Sanity checks
+		return;
+	}
+	
+	UIntPtr idx = 0;
+	Boolean found = False;
+	
+	ListForeach(NetUDPSockets, i) {																													// Try to find it on the ARP IPv4 socket list
+		if (i->data == sock) {
+			found = True;																															// Found!
+			break;
+		} else {
+			idx++;	
+		}
+	}
+	
+	if (!found) {
+		return;																																		// Not found...
+	} else if (sock->owner_process != PsCurrentProcess) {
+		return;
+	}
+	
+	ListRemove(NetUDPSockets, idx);																													// Remove it from the UDP socket list
+	
+	while (sock->packet_queue->length != 0) {																										// Free all the packets that are in the queue
+		UIntPtr data = (UIntPtr)QueueRemove(sock->packet_queue);
+		
+		if (sock->user) {																															// Use MmFreeUserMemory?
+			MmFreeUserMemory(data);																													// Yes
+		} else {
+			MemFree(data);																															// Nope
+		}
+	}
+	
+	QueueFree(sock->packet_queue);																													// Free the packet queue struct itself
+	MemFree((UIntPtr)sock);																															// And free the socket struct itself
+}
+
+Void NetSendUDPSocket(PUDPSocket sock, UIntPtr len, PUInt8 buf) {
+	if (sock == Null) {																																// Sanity check
+		return;
+	}
+	
+	NetSendUDPPacket(sock->dev, sock->ipv4_address, sock->port, len, buf);																			// Send!
+}
+
+PUDPHeader NetReceiveUDPSocket(PUDPSocket sock) {
+	if (sock == Null) {																																// Sanity check
+		return Null;
+	}
+	
+	while (sock->packet_queue->length == 0) {																										// Wait the packet that we want :)
+		PsSwitchTask(Null);
+	}
+	
+	return (PUDPHeader)QueueRemove(sock->packet_queue);																								// Now, return it!
 }
 
 static Void NetHandleARPPacket(PNetworkDevice dev, PARPHeader hdr) {

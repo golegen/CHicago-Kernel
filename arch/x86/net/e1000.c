@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 19:40 BRT
-// Last edited on December 14 of 2018, at 19:12 BRT
+// Last edited on December 15 of 2018, at 21:40 BRT
 
 #include <chicago/arch/e1000.h>
 #include <chicago/arch/pci.h>
@@ -57,7 +57,7 @@ static Void E1000Send(PVoid ndev, UIntPtr len, PUInt8 data) {
 	Volatile PE1000Device dev = (PE1000Device)ndev;
 	UInt8 old = dev->tx_cur;
 	
-	StrCopyMemory((PUInt8)(dev->tx_descs_virt[old]), data, len);
+	StrCopyMemory((PUInt8)(dev->tx_descs_buffs[old]), data, len);
 	
 	dev->tx_descs[old].length = len;
 	dev->tx_descs[old].cmd = 0x1B;
@@ -86,7 +86,7 @@ static Void E1000Handler(PVoid priv) {
 			PUInt8 buf = (PUInt8)MemAllocate(len);									// Try to alloc some space
 			
 			if (buf != Null) {
-				StrCopyMemory(buf, (PUInt8)dev->rx_descs_virt[old], len);			// Ok, copy the data
+				StrCopyMemory(buf, (PUInt8)dev->rx_descs_buffs[old], len);			// Ok, copy the data
 				NetDevicePushPacket(dev->ndev, buf);								// And now our net layer should handle it!
 			}
 			
@@ -207,11 +207,11 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 	}
 	
 	for (UInt32 i = 0; i < 32; i++) {
-		dev->rx_descs[i].addr = E1000AllocCont(0x3000, &dev->rx_descs_virt[i]);		// Alloc the phys/virt address of this receive desc
+		dev->rx_descs[i].addr = E1000AllocCont(0x3000, &dev->rx_descs_buffs[i]);	// Alloc the phys/virt address of this receive desc
 		
 		if (dev->rx_descs[i].addr == 0) {
 			for (UIntPtr j = 0; j < i; j++) {										// We failed, unmap everything
-				MemAFree(dev->rx_descs_virt[j]);
+				MemAFree(dev->rx_descs_buffs[j]);
 			}
 			
 			MemAFree((UIntPtr)dev->rx_descs);
@@ -229,7 +229,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 	
 	if (dev->tx_descs_phys == 0) {
 		for (UIntPtr i = 0; i < 32; i++) {											// We failed, unmap everything
-			MemAFree(dev->rx_descs_virt[i]);
+			MemAFree(dev->rx_descs_buffs[i]);
 		}
 		
 		MemAFree((UIntPtr)dev->rx_descs);
@@ -241,17 +241,17 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 	}
 	
 	for (UInt32 i = 0; i < 8; i++) {
-		dev->tx_descs[i].addr = E1000AllocCont(0x3000, &dev->tx_descs_virt[i]);		// Alloc the phys/virt address of this transmit desc
+		dev->tx_descs[i].addr = E1000AllocCont(0x3000, &dev->tx_descs_buffs[i]);	// Alloc the phys/virt address of this transmit desc
 		
 		if (dev->tx_descs[i].addr == 0) {
 			for (UIntPtr j = 0; j < i; j++) {										// We failed, unmap everything
-				MemAFree(dev->tx_descs_virt[j]);
+				MemAFree(dev->tx_descs_buffs[j]);
 			}
 			
 			MemAFree((UIntPtr)dev->tx_descs);
 			
 			for (UIntPtr j = 0; j < 32; j++) {
-				MemAFree(dev->rx_descs_virt[j]);
+				MemAFree(dev->rx_descs_buffs[j]);
 			}
 			
 			MemAFree((UIntPtr)dev->rx_descs);

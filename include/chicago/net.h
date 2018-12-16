@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:25 BRT
-// Last edited on December 15 of 2018, at 17:35 BRT
+// Last edited on December 15 of 2018, at 21:36 BRT
 
 #ifndef __CHICAGO_NET_H__
 #define __CHICAGO_NET_H__
@@ -26,6 +26,8 @@
 
 #define ARP_OPC_REQUEST 0x01
 #define ARP_OPC_REPLY 0x02
+
+#define IP_PROTOCOL_UDP 0x11
 
 typedef struct {
 	UInt8 dst[6];
@@ -66,6 +68,13 @@ typedef struct {
 } Packed IPHeader, *PIPHeader;
 
 typedef struct {
+	UInt16 sport;
+	UInt16 dport;
+	UInt16 length;
+	UInt16 checksum;
+} Packed UDPHeader, *PUDPHeader;
+
+typedef struct {
 	Boolean free;
 	UInt8 mac_address[6];
 	UInt8 ipv4_address[4];
@@ -93,6 +102,15 @@ typedef struct {
 	PProcess owner_process;
 } ARPIPv4Socket, *PARPIPv4Socket;
 
+typedef struct {
+	UInt16 port;
+	Boolean user;
+	PNetworkDevice dev;
+	PQueue packet_queue;
+	UInt8 ipv4_address[4];
+	PProcess owner_process;
+} UDPSocket, *PUDPSocket;
+
 PNetworkDevice NetAddDevice(PVoid priv, UInt8 mac[6], Void (*send)(PVoid, UIntPtr, PUInt8));
 PNetworkDevice NetGetDevice(PFsNode dev);
 Void NetRemoveDevice(PNetworkDevice dev);
@@ -102,10 +120,15 @@ Void NetSendRawPacket(PNetworkDevice dev, UIntPtr len, PUInt8 buf);
 Void NetSendEthPacket(PNetworkDevice dev, UInt8 dest[6], UInt16 type, UIntPtr len, PUInt8 buf);
 Void NetSendARPIPv4Packet(PNetworkDevice dev, UInt8 destm[6], UInt8 desti[4], UInt16 opcode);
 Void NetSendIPv4Packet(PNetworkDevice dev, UInt8 dest[4], UInt8 protocol, UIntPtr len, PUInt8 buf);
+Void NetSendUDPPacket(PNetworkDevice dev, UInt8 dest[4], UInt16 port, UIntPtr len, PUInt8 buf);
 PARPIPv4Socket NetAddARPIPv4Socket(PNetworkDevice dev, UInt8 mac[6], UInt8 ipv4[4], Boolean user);
 Void NetRemoveARPIPv4Socket(PARPIPv4Socket sock);
 Void NetSendARPIPv4Socket(PARPIPv4Socket sock, UInt16 opcode);
 PARPHeader NetReceiveARPIPv4Socket(PARPIPv4Socket sock);
+PUDPSocket NetAddUDPSocket(PNetworkDevice dev, UInt8 ipv4[4], UInt8 port, Boolean user);
+Void NetRemoveUDPSocket(PUDPSocket sock);
+Void NetSendUDPSocket(PUDPSocket sock, UIntPtr len, PUInt8 buf);
+PUDPHeader NetReceiveUDPSocket(PUDPSocket sock);
 Void NetFinish(Void);
 
 #endif		// __CHICAGO_NET_H__

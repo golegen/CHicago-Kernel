@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 19:41 BRT
-// Last edited on December 12 of 2018, at 18:18 BRT
+// Last edited on December 15 of 2018, at 21:38 BRT
 
 #ifndef __CHICAGO_ARCH_E1000_H__
 #define __CHICAGO_ARCH_E1000_H__
@@ -40,9 +40,9 @@ typedef struct {
 	PNetworkDevice ndev;
 	UInt8 mac_address[6];
 	PE1000RXDesc rx_descs;
-	UIntPtr rx_descs_virt[32];
+	UIntPtr rx_descs_buffs[32];
 	PE1000TXDesc tx_descs;
-	UIntPtr tx_descs_virt[8];
+	UIntPtr tx_descs_buffs[8];
 	UIntPtr rx_descs_phys;
 	UIntPtr tx_descs_phys;
 } E1000Device, *PE1000Device;
