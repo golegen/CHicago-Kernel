@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:36 BRT
-// Last edited on December 15 of 2018, at 21:36 BRT
+// Last edited on December 15 of 2018, at 22:10 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -553,9 +553,7 @@ PUDPHeader NetReceiveUDPSocket(PUDPSocket sock) {
 }
 
 static Void NetHandleARPPacket(PNetworkDevice dev, PARPHeader hdr) {
-	if ((dev == Null) || (hdr == Null)) {																											// Sanity checks
-		return;
-	} else if (hdr->htype == ToNetByteOrder16(hdr->htype)) {
+	if (hdr->htype == ToNetByteOrder16(hdr->htype)) {
 		return;
 	} else if (FromNetByteOrder16(hdr->ptype) != ETH_TYPE_IP) {
 		return;
@@ -623,6 +621,47 @@ static Void NetHandleARPPacket(PNetworkDevice dev, PARPHeader hdr) {
 	}
 }
 
+static Void NetHandleIPPacket(PNetworkDevice dev, PIPHeader hdr) {
+	if (hdr->version != 4) {
+		return;
+	} else if (hdr->ttl == 0) {
+		return;
+	}
+	
+	if (StrCompareMemory(dev->ipv4_address, hdr->ipv4.dst, 4)) {																					// For us?
+		if ((hdr->protocol == IP_PROTOCOL_UDP) && (NetUDPSockets != Null)) {																		// Yes, it's UDP?
+			PUDPHeader uhdr = (PUDPHeader)(((UIntPtr)hdr) + 20);
+			
+			ListForeach(NetUDPSockets, i) {																											// Yes, let's see if any process want it!
+				PUDPSocket sock = (PUDPSocket)i->data;
+				
+				if (StrCompareMemory(sock->ipv4_address, hdr->ipv4.src, 4) && (uhdr->dport == sock->port)) {
+					PsLockTaskSwitch(old);																											// Ok, lock task switch
+					UIntPtr oldpd = MmGetCurrentDirectory();
+					UIntPtr size = sizeof(UDPHeader) + uhdr->length;
+					
+					if (sock->user && (oldpd != sock->owner_process->dir)) {																		// We need to switch to another dir?
+						MmSwitchDirectory(sock->owner_process->dir);																				// Yes
+					}
+					
+					PUDPHeader new = (PUDPHeader)(sock->user ? MmAllocUserMemory(size) : MemAllocate(size));										// Alloc some space for copying the udp data
+					
+					if (new != Null) {
+						StrCopyMemory(new, hdr, size);																								// Ok, copy it and add it to the queue
+						QueueAdd(sock->packet_queue, new);
+					}
+					
+					if (sock->user && (oldpd != sock->owner_process->dir)) {																		// We need to switch back?
+						MmSwitchDirectory(oldpd);																									// Yes
+					}
+					
+					PsUnlockTaskSwitch(old);
+				}
+			}
+		}
+	}
+}
+
 static Void NetHandleEthPacket(PNetworkDevice dev, UInt8 src[6], UInt16 type, PUInt8 buf) {
 	if ((dev == Null) || (src == Null) || (buf == Null)) {																							// Sanity checks
 		return;
@@ -630,6 +669,8 @@ static Void NetHandleEthPacket(PNetworkDevice dev, UInt8 src[6], UInt16 type, PU
 	
 	if (type == ETH_TYPE_ARP) {																														// ARP?
 		NetHandleARPPacket(dev, (PARPHeader)buf);																									// Yes, handle it!
+	} else if (type == ETH_TYPE_IP) {																												// IP?
+		NetHandleIPPacket(dev, (PIPHeader)buf);																										// Yes, handle it!
 	}
 }
 
