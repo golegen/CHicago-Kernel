@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:36 BRT
-// Last edited on December 15 of 2018, at 22:10 BRT
+// Last edited on December 15 of 2018, at 22:50 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -232,7 +232,7 @@ static Boolean NetResolveIPv4Address(PNetworkDevice dev, UInt8 ip[4], PUInt8 des
 	UIntPtr last = 0;
 	UIntPtr count = 0;
 	
-	if ((ip[0] != 10) && ((ip[0] != 172) || ((ip[1] < 16) || (ip[1] > 31))) && ((ip[0] == 192) && (ip[1] == 168))) {								// First, let's check if we really need to use arp to get the mac address
+	if ((ip[0] != 10) && ((ip[0] != 172) || ((ip[1] < 16) || (ip[1] > 31))) && ((ip[0] != 192) || (ip[1] != 168))) {								// First, let's check if we really need to use arp to get the mac address
 		StrCopyMemory(dest, broadcast, 6);																											// Nope, it's outside of the local network, the network card should do everything
 		return True;
 	} else if ((ip[0] == 127) && (ip[1] == 0) && (ip[2] == 0) && (ip[3] == 1)) {																	// Loopback/localhost?
@@ -341,7 +341,7 @@ Void NetSendUDPPacket(PNetworkDevice dev, UInt8 dest[4], UInt16 port, UIntPtr le
 	}
 	
 	hdr->sport = hdr->dport = ToNetByteOrder16(port);																								// Set the port
-	hdr->length = ToNetByteOrder16(((UInt16)len));																									// Set the data length
+	hdr->length = ToNetByteOrder16(((UInt16)(sizeof(UDPHeader) + len)));																			// Set the length
 	hdr->checksum = 0;																																// I still need to implement the UDP checksum calculation...
 	
 	StrCopyMemory(((PUInt8)hdr) + sizeof(UDPHeader), buf, len);																						// Copy the data
@@ -451,7 +451,7 @@ PARPHeader NetReceiveARPIPv4Socket(PARPIPv4Socket sock) {
 	return (PARPHeader)QueueRemove(sock->packet_queue);																								// Now, return it!
 }
 
-PUDPSocket NetAddUDPSocket(PNetworkDevice dev, UInt8 ipv4[4], UInt8 port, Boolean user) {
+PUDPSocket NetAddUDPSocket(PNetworkDevice dev, UInt8 ipv4[4], UInt16 port, Boolean user) {
 	if (NetUDPSockets == Null) {																													// Init the UDP socket list?
 		NetUDPSockets = ListNew(False, False);																										// Yes :)
 		
@@ -622,6 +622,7 @@ static Void NetHandleARPPacket(PNetworkDevice dev, PARPHeader hdr) {
 }
 
 static Void NetHandleIPPacket(PNetworkDevice dev, PIPHeader hdr) {
+	
 	if (hdr->version != 4) {
 		return;
 	} else if (hdr->ttl == 0) {
@@ -635,10 +636,10 @@ static Void NetHandleIPPacket(PNetworkDevice dev, PIPHeader hdr) {
 			ListForeach(NetUDPSockets, i) {																											// Yes, let's see if any process want it!
 				PUDPSocket sock = (PUDPSocket)i->data;
 				
-				if (StrCompareMemory(sock->ipv4_address, hdr->ipv4.src, 4) && (uhdr->dport == sock->port)) {
+				if (StrCompareMemory(sock->ipv4_address, hdr->ipv4.src, 4) && (uhdr->dport == ToNetByteOrder16(sock->port))) {
 					PsLockTaskSwitch(old);																											// Ok, lock task switch
 					UIntPtr oldpd = MmGetCurrentDirectory();
-					UIntPtr size = sizeof(UDPHeader) + uhdr->length;
+					UIntPtr size = FromNetByteOrder16(uhdr->length);
 					
 					if (sock->user && (oldpd != sock->owner_process->dir)) {																		// We need to switch to another dir?
 						MmSwitchDirectory(sock->owner_process->dir);																				// Yes

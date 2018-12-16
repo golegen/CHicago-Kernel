@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:25 BRT
-// Last edited on December 15 of 2018, at 21:36 BRT
+// Last edited on December 15 of 2018, at 22:49 BRT
 
 #ifndef __CHICAGO_NET_H__
 #define __CHICAGO_NET_H__
@@ -125,7 +125,7 @@ PARPIPv4Socket NetAddARPIPv4Socket(PNetworkDevice dev, UInt8 mac[6], UInt8 ipv4[
 Void NetRemoveARPIPv4Socket(PARPIPv4Socket sock);
 Void NetSendARPIPv4Socket(PARPIPv4Socket sock, UInt16 opcode);
 PARPHeader NetReceiveARPIPv4Socket(PARPIPv4Socket sock);
-PUDPSocket NetAddUDPSocket(PNetworkDevice dev, UInt8 ipv4[4], UInt8 port, Boolean user);
+PUDPSocket NetAddUDPSocket(PNetworkDevice dev, UInt8 ipv4[4], UInt16 port, Boolean user);
 Void NetRemoveUDPSocket(PUDPSocket sock);
 Void NetSendUDPSocket(PUDPSocket sock, UIntPtr len, PUInt8 buf);
 PUDPHeader NetReceiveUDPSocket(PUDPSocket sock);
