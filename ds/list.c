@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 22:08 BRT
-// Last edited on December 15 of 2018, at 18:55 BRT
+// Last edited on December 16 of 2018, at 14:01 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/list.h>
@@ -64,6 +64,7 @@ Boolean ListAddStart(PList list, PVoid data) {
 	}
 	
 	node->data = data;																// We don't need to copy the data
+	node->prev = Null;
 	
 	if (list->length == 0) {														// This is the head and tail (the first entry)?
 		node->next = Null;															// Yes!
@@ -72,7 +73,7 @@ Boolean ListAddStart(PList list, PVoid data) {
 		list->head->prev = node;
 	}
 	
-	node->prev = list->head = node;
+	list->head = node;
 	list->length++;
 	
 	return True;
@@ -110,7 +111,7 @@ PVoid ListRemove(PList list, UIntPtr idx) {
 	PListNode cur = list->head;
 	PVoid data = Null;
 	
-	for (UInt32 i = 0; i < idx; i++) {												// Get the list node
+	for (UIntPtr i = 0; i < idx; i++) {												// Get the list node
 		cur = cur->next;
 	}
 	
@@ -119,12 +120,15 @@ PVoid ListRemove(PList list, UIntPtr idx) {
 	if (cur == list->head) {														// Was the list head?
 		list->head = cur->next;														// Yup, so set the list head to the next entry (comparated to the node, of course)
 	}
+	
 	if (cur == list->tail) {														// Was the list tail?
 		list->tail = cur->prev;														// Yup, so set the list tail to the prev entry (comparated to the node, of course)
 	}
+	
 	if (cur->prev != Null) {														// Had a prev?
 		cur->prev->next = cur->next;												// Yes, so fix it
 	}
+	
 	if (cur->next != Null) {														// Had a next?
 		cur->next->prev = cur->prev;												// Yes, so fix it
 	}

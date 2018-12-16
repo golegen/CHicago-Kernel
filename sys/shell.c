@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 15 of 2018, at 22:54 BRT
+// Last edited on December 16 of 2018, at 13:12 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -265,8 +265,37 @@ static Void ShellMain(Void) {
 			DbgWriteFormated("PANIC! User requested panic :)\r\n");
 			Panic(PANIC_KERNEL_UNEXPECTED_ERROR);
 		} else if (StrGetLength(argv[0]) == 4 && StrCompare(argv[0], L"ping")) {
-			if (argc < 3) {																																// Show usage?
+			if (argc < 2) {																																// Show usage?
 				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_USAGE), argv[0]);																		// Yes
+				continue;
+			} else if (argc == 2) {																														// Set the ip of the default device?
+				PNetworkDevice dev = NetGetDefaultDevice();																								// Yes!
+				
+				if (dev == Null) {
+					ConWriteFormated(NlsGetMessage(NLS_SHELL_DNDNOTSET));
+					continue;
+				}
+				
+				UInt8 mac[6] =  { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+				UInt8 ipv4[4] = { 0 };																													// Let's convert the user input!
+				
+				if (!ToIPv4(argv[1], ipv4)) {
+					ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR3));																				// Failed...
+					continue;
+				}
+				
+				PARPIPv4Socket sock = NetAddARPIPv4Socket(dev, mac, ipv4, False);																		// Create the socket
+				
+				if (sock == Null) {
+					ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR1));																				// Failed...
+					continue;
+				}
+
+				NetSendARPIPv4Socket(sock, ARP_OPC_REQUEST);																							// Send the REQUEST command
+				MemFree((UIntPtr)NetReceiveARPIPv4Socket(sock));																						// Wait for the REPLY
+				NetRemoveARPIPv4Socket(sock);																											// Remove the socket
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_PING_REPLY), argv[1]);
+				
 				continue;
 			}
 			
@@ -329,8 +358,27 @@ static Void ShellMain(Void) {
 			DispRefresh();																																// Refresh the screen
 			ConSetRefresh(True);																														// Enable screen refresh
 		} else if (StrGetLength(argv[0]) == 5 && StrCompare(argv[0], L"setip")) {																		// Set the IP(v4) address
-			if (argc < 3) {																																// Show usage?
+			if (argc < 2) {																																// Show usage?
 				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_USAGE), argv[0]);																		// Yes
+				continue;
+			} else if (argc == 2) {																														// Set the ip of the default device?
+				PNetworkDevice dev = NetGetDefaultDevice();																								// Yes!
+				
+				if (dev == Null) {
+					ConWriteFormated(NlsGetMessage(NLS_SHELL_DNDNOTSET));
+					continue;
+				}
+				
+				UInt8 newip[4] = { 0 };																													// Let's convert the user input!
+				
+				if (!ToIPv4(argv[1], newip)) {
+					ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR3));																				// Failed...
+					continue;
+				}
+				
+				StrCopyMemory(dev->ipv4_address, newip, 4);																								// Change the IPv4 address!
+				ConWriteFormated(L"\r\n");
+				
 				continue;
 			}
 			
@@ -360,6 +408,39 @@ static Void ShellMain(Void) {
 			
 			FsControlFile(file, 1, newip, Null);																										// Change the IPv4 address
 			FsCloseFile(file);																															// And close the file :)
+			ConWriteFormated(L"\r\n");
+		} else if (StrGetLength(argv[0]) == 6 && StrCompare(argv[0], L"setnet")) {																		// Set the default network device
+			if (argc < 2) {																																// Show usage?
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETNET_USAGE), argv[0]);																		// Yes
+				continue;
+			}
+			
+			PWChar path = argv[1][0] == '\\' ? FsJoinPath(argv[1], Null) : FsJoinPath(L"\\Devices\\", argv[1]);											// Try to "create" the full file path string
+			
+			if (path == Null) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR1));																					// Failed...
+				continue;
+			}
+			
+			PFsNode file = FsOpenFile(path);																											// Let's open the file!
+			
+			MemFree((UIntPtr)path);
+			
+			if ((file == Null) || ((file->flags & FS_FLAG_FILE) != FS_FLAG_FILE)) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR2), argv[1]);																			// ...
+				continue;
+			}
+			
+			PNetworkDevice dev = NetGetDevice(file);																									// Get the network device
+			
+			FsCloseFile(file);
+			
+			if (dev == Null) {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_SETIP_ERR2), argv[1]);																			// ...
+				continue;
+			}
+			
+			NetSetDefaultDevice(dev);																													// Set the default device!
 			ConWriteFormated(L"\r\n");
 		} else if (StrGetLength(argv[0]) == 3 && StrCompare(argv[0], L"ver")) {																			// Print the system version
 			ConSetRefresh(False);																														// Disable screen refresh

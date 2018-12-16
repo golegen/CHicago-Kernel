@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 07 of 2018, at 10:41 BRT
-// Last edited on December 14 of 2018, at 18:28 BRT
+// Last edited on December 16 of 2018, at 14:01 BRT
 
 #include <chicago/console.h>
 #include <chicago/debug.h>
@@ -10,6 +10,8 @@
 #include <chicago/process.h>
 
 Queue ConsoleDeviceKeyboardQueue;
+UIntPtr ConsoleDeviceKeyboardNewLineLoc = 0;
+Boolean ConsoleDeviceKeyboardNewLine = False;
 Lock ConsoleDeviceKeyboardQueueReadLock = { False, Null };
 Lock ConsoleDeviceKeyboardQueueWriteLock = { False, Null };
 
@@ -18,34 +20,39 @@ Void ConsoleDeviceReadKeyboard(UIntPtr len, PWChar buf) {
 		return;
 	}
 	
-	while (ConsoleDeviceKeyboardQueue.length < len) {																// Let's fill the queue with the chars that we need
-		if (((UInt8)ListGet(&ConsoleDeviceKeyboardQueue, 0)) == '\n') {												// End?
-			ListRemove(&ConsoleDeviceKeyboardQueue, 0);																// Yes
-			break;
-		}
-		
+	while ((ConsoleDeviceKeyboardQueue.length < len) && !ConsoleDeviceKeyboardNewLine) {							// Let's fill the queue with the chars that we need
 		PsSwitchTask(Null);
 	}
 	
 	PsLock(&ConsoleDeviceKeyboardQueueReadLock);																	// Lock
 	
 	UIntPtr alen = ConsoleDeviceKeyboardQueue.length;																// Save the avaliable length
+	UIntPtr nlen = ConsoleDeviceKeyboardNewLineLoc + 1;
+	UIntPtr flen = ConsoleDeviceKeyboardNewLine ? nlen : alen;
 	
-	for (UIntPtr i = 0; i < len && i < alen; i++) {																	// Fill the buffer!
+	for (UIntPtr i = 0; i < flen; i++) {																			// Fill the buffer!
 		buf[i] = (UInt8)QueueRemove(&ConsoleDeviceKeyboardQueue);
 	}
 	
-	if (alen < len) {																								// Put a string terminator (NUL) in the end!
-		buf[alen] = 0;
+	if (ConsoleDeviceKeyboardNewLine) {																				// Put a string terminator (NUL) in the end!
+		buf[nlen - 1] = 0;
 	} else {
-		buf[len] = 0;
+		buf[flen] = 0;
 	}
+	
+	ConsoleDeviceKeyboardNewLine = False;																			// Unset the ConsoleDeviceKeyboardNewLine
 	
 	PsUnlock(&ConsoleDeviceKeyboardQueueReadLock);																	// Unlock!
 }
 
 Void ConsoleDeviceWriteKeyboard(Char data) {
 	PsLock(&ConsoleDeviceKeyboardQueueWriteLock);																	// Lock
+	
+	if (data == '\n') {																								// New line?
+		ConsoleDeviceKeyboardNewLine = True;																		// Yes, set the position!
+		ConsoleDeviceKeyboardNewLineLoc = ConsoleDeviceKeyboardQueue.length;
+	}
+	
 	QueueAdd(&ConsoleDeviceKeyboardQueue, (PVoid)data);																// Add to the queue
 	PsUnlock(&ConsoleDeviceKeyboardQueueWriteLock);																	// Unlock!
 }
@@ -54,12 +61,14 @@ Boolean ConsoleDeviceBackKeyboard(Void) {
 	Boolean ret = False;
 	
 	PsLock(&ConsoleDeviceKeyboardQueueReadLock);																	// Lock
+	PsLock(&ConsoleDeviceKeyboardQueueWriteLock);
 	
 	if (ConsoleDeviceKeyboardQueue.length != 0) {																	// We can do it?
 		ListRemove(&ConsoleDeviceKeyboardQueue, 0);																	// Yes, remove the first entry!
 		ret = True;
 	}
 	
+	PsUnlock(&ConsoleDeviceKeyboardQueueWriteLock);
 	PsUnlock(&ConsoleDeviceKeyboardQueueReadLock);																	// Unlock!
 	
 	return ret;
@@ -67,11 +76,13 @@ Boolean ConsoleDeviceBackKeyboard(Void) {
 
 Void ConsoleDeviceClearKeyboard(Void) {
 	PsLock(&ConsoleDeviceKeyboardQueueReadLock);																	// Lock
+	PsLock(&ConsoleDeviceKeyboardQueueWriteLock);
 	
 	while (ConsoleDeviceKeyboardQueue.length != 0) {																// Clean!
 		QueueRemove(&ConsoleDeviceKeyboardQueue);
 	}
 	
+	PsUnlock(&ConsoleDeviceKeyboardQueueWriteLock);
 	PsUnlock(&ConsoleDeviceKeyboardQueueReadLock);																	// Unlock!
 }
 

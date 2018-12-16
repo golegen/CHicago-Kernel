@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:25 BRT
-// Last edited on December 15 of 2018, at 22:49 BRT
+// Last edited on December 16 of 2018, at 12:48 BRT
 
 #ifndef __CHICAGO_NET_H__
 #define __CHICAGO_NET_H__
@@ -15,9 +15,9 @@
 #define FromNetByteOrder16(v) (v)
 #define FromNetByteOrder32(v) (v)
 #else
-#define ToNetByteOrder16(v) ((v >> 8) | (v << 8))
+#define ToNetByteOrder16(v) ((UInt16)((v >> 8) | (v << 8)))
 #define ToNetByteOrder32(v) (((v >> 24) & 0xFF) | ((v << 8) & 0xFF0000) | ((v >> 8) & 0xFF00) | ((v << 24) & 0xFF000000))
-#define FromNetByteOrder16(v) ((v >> 8) | (v << 8))
+#define FromNetByteOrder16(v) ((UInt16)((v >> 8) | (v << 8)))
 #define FromNetByteOrder32(v) (((v >> 24) & 0xFF) | ((v << 8) & 0xFF0000) | ((v >> 8) & 0xFF00) | ((v << 24) & 0xFF000000))
 #endif
 
@@ -114,6 +114,8 @@ typedef struct {
 PNetworkDevice NetAddDevice(PVoid priv, UInt8 mac[6], Void (*send)(PVoid, UIntPtr, PUInt8));
 PNetworkDevice NetGetDevice(PFsNode dev);
 Void NetRemoveDevice(PNetworkDevice dev);
+Void NetSetDefaultDevice(PNetworkDevice dev);
+PNetworkDevice NetGetDefaultDevice(Void);
 Void NetDevicePushPacket(PNetworkDevice dev, PUInt8 packet);
 PUInt8 NetDevicePopPacket(PNetworkDevice dev);
 Void NetSendRawPacket(PNetworkDevice dev, UIntPtr len, PUInt8 buf);
@@ -128,7 +130,7 @@ PARPHeader NetReceiveARPIPv4Socket(PARPIPv4Socket sock);
 PUDPSocket NetAddUDPSocket(PNetworkDevice dev, UInt8 ipv4[4], UInt16 port, Boolean user);
 Void NetRemoveUDPSocket(PUDPSocket sock);
 Void NetSendUDPSocket(PUDPSocket sock, UIntPtr len, PUInt8 buf);
-PUDPHeader NetReceiveUDPSocket(PUDPSocket sock);
+PIPHeader NetReceiveUDPSocket(PUDPSocket sock);
 Void NetFinish(Void);
 
 #endif		// __CHICAGO_NET_H__
