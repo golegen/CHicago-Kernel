@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:59 BRT
-// Last edited on December 15 of 2018, at 00:00 BRT
+// Last edited on December 15 of 2018, at 19:00 BRT
 
 #define __CHICAGO_PROCESS__
 
@@ -26,7 +26,6 @@ Boolean PsTaskSwitchEnabled = False;
 PThread PsCurrentThread = Null;
 PQueue PsThreadQueue = Null;
 PList PsProcessList = Null;
-PList PsSleepList = Null;
 PList PsWaittList = Null;
 PList PsWaitpList = Null;
 PList PsWaitlList = Null;
@@ -203,26 +202,12 @@ PProcess PsGetProcess(UIntPtr id) {
 Void PsSleep(UIntPtr ms) {
 	if (ms == 0) {																																// ms = 0?
 		return;																																	// Yes, we don't need to do anything
-	} else if ((PsSleepList == Null) || (PsThreadQueue == Null) || (PsCurrentThread == Null)) {													// Sleep list is initialized?
+	} else if (PsCurrentThread == Null) {																										// Use the TimerSleepProcess?
 		TimerSleep(ms);																															// Nope
 		return;
-	} else if (PsThreadQueue->length == 0) {																									// We have any thread in the queue?
-		TimerSleepProcess(ms);																													// Nope
-		return;
 	}
 	
-	PsLockTaskSwitch(old);																														// Lock
-	
-	if (!ListAdd(PsSleepList, PsCurrentThread)) {																								// Try to add it to the sleep list
-		PsUnlockTaskSwitch(old);																												// Failed
-		TimerSleepProcess(ms);
-		return;
-	}
-	
-	PsCurrentThread->wtime = ms - 1;
-	
-	PsUnlockTaskSwitch(old);																													// Unlock
-	PsSwitchTask(PsDontRequeue);																												// Remove it from the queue and go to the next thread
+	TimerSleepProcess(ms);																														// Use TimerSleepProcess
 }
 
 UIntPtr PsWaitThread(UIntPtr id) {
@@ -422,14 +407,6 @@ Void PsExitProcess(UIntPtr ret) {
 				ListRemove(PsThreadQueue, idx);																									// Yes, remove it!
 			}
 			
-			if (PsSleepList != Null) {																											// Let's remove any of our threads from the sleep list
-				ListForeach(PsSleepList, j) {
-					if (j->data == th) {																										// Found?
-						PsWakeup2(PsSleepList, th);																								// Yes :)
-					}
-				}
-			}
-			
 			if (PsWaittList != Null) {																											// Let's remove any of our threads from the waitt list
 				for (PListNode j = PsWaittList->tail; j != Null; j = j->prev) {
 					PThread th2 = (PThread)j->data;
@@ -613,11 +590,6 @@ Void PsInit(Void) {
 	}
 	
 	if ((PsProcessList = ListNew(False, False)) == Null) {																						// Try to init the process list
-		DbgWriteFormated("PANIC! Failed to init tasking\r\n");
-		Panic(PANIC_KERNEL_INIT_FAILED);
-	}
-	
-	if ((PsSleepList = ListNew(False, False)) == Null) {																						// Try to init the sleep list
 		DbgWriteFormated("PANIC! Failed to init tasking\r\n");
 		Panic(PANIC_KERNEL_INIT_FAILED);
 	}

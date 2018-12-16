@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 28 of 2018, at 01:09 BRT
-// Last edited on December 14 of 2018, at 17:56 BRT
+// Last edited on December 15 of 2018, at 18:58 BRT
 
 #define __CHICAGO_ARCH_PROCESS__
 
@@ -63,18 +63,6 @@ Void PsFreeContext(PContext ctx) {
 }
 
 Void PsSwitchTaskTimer(PRegisters regs) {
-	if (PsSleepList != Null) {																						// Remember that this function is called each 1ms :)
-		ListForeach(PsSleepList, i) {
-			PThread th = (PThread)i->data;
-			
-			if (th->wtime == 0) {																					// Wakeup?
-				PsWakeup(PsSleepList, th);																			// Yes :)
-			} else {
-				th->wtime--;																						// Nope, just decrese the wtime counter
-			}
-		}
-	}
-	
 	if ((PsThreadQueue == Null) || (PsThreadQueue->length == 0) || (!PsTaskSwitchEnabled)) {						// We can switch?
 		return;																										// Nope
 	} else if (PsCurrentThread->time != 0) {																		// This process still have time to run?

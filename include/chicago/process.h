@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:42 BRT
-// Last edited on December 14 of 2018, at 15:10 BRT
+// Last edited on December 15 of 2018, at 18:58 BRT
 
 #ifndef __CHICAGO_PROCESS_H__
 #define __CHICAGO_PROCESS_H__
@@ -61,7 +61,6 @@ extern Boolean PsTaskSwitchEnabled;
 extern PThread PsCurrentThread;
 extern PQueue PsThreadQueue;
 extern PList PsProcessList;
-extern PList PsSleepList;
 extern PList PsWaittList;
 extern PList PsWaitpList;
 extern PList PsWaitlList;

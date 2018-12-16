@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 22:08 BRT
-// Last edited on November 10 of 2018, at 15:28 BRT
+// Last edited on December 15 of 2018, at 18:55 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/list.h>
@@ -90,7 +90,7 @@ Boolean ListAdd(PList list, PVoid data) {
 	
 	if (list->length == 0) {														// This is the head and tail (the first entry)?
 		list->head = list->tail = node;												// Yes!
-		node->prev = node;
+		node->prev = Null;
 	} else {
 		list->tail->next = node;													// No
 		node->prev = list->tail;

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:25 BRT
-// Last edited on December 14 of 2018, at 19:06 BRT
+// Last edited on December 15 of 2018, at 17:35 BRT
 
 #ifndef __CHICAGO_NET_H__
 #define __CHICAGO_NET_H__
@@ -31,7 +31,7 @@ typedef struct {
 	UInt8 dst[6];
 	UInt8 src[6];
 	UInt16 type;
-} EthFrame, *PEthFrame;
+} Packed EthFrame, *PEthFrame;
 
 typedef struct {
 	UInt16 htype;
@@ -45,7 +45,31 @@ typedef struct {
 		UInt8 dst_hw[6];
 		UInt8 dst_pr[4];
 	} ipv4;
-} ARPHeader, *PARPHeader;
+} Packed ARPHeader, *PARPHeader;
+
+typedef struct {
+	UInt8 ihl : 4;
+	UInt8 version : 4;
+	UInt8 ecn : 2;
+	UInt8 dscp : 6;
+	UInt16 length;
+	UInt16 id;
+	UInt8 flags : 3;
+	UInt16 frag_off : 13;
+	UInt8 ttl;
+	UInt8 protocol;
+	UInt16 checksum;
+	struct {
+		UInt8 src[4];
+		UInt8 dst[4];
+	} ipv4;
+} Packed IPHeader, *PIPHeader;
+
+typedef struct {
+	Boolean free;
+	UInt8 mac_address[6];
+	UInt8 ipv4_address[4];
+} ARPCache, *PARPCache;
 
 typedef struct {
 	UIntPtr id;
@@ -54,6 +78,7 @@ typedef struct {
 	PQueue packet_queue;
 	UInt8 mac_address[6];
 	UInt8 ipv4_address[4];
+	ARPCache arp_cache[32];
 	Lock packet_queue_rlock;
 	Lock packet_queue_wlock;
 	Void (*send)(PVoid, UIntPtr, PUInt8);
@@ -76,6 +101,7 @@ PUInt8 NetDevicePopPacket(PNetworkDevice dev);
 Void NetSendRawPacket(PNetworkDevice dev, UIntPtr len, PUInt8 buf);
 Void NetSendEthPacket(PNetworkDevice dev, UInt8 dest[6], UInt16 type, UIntPtr len, PUInt8 buf);
 Void NetSendARPIPv4Packet(PNetworkDevice dev, UInt8 destm[6], UInt8 desti[4], UInt16 opcode);
+Void NetSendIPv4Packet(PNetworkDevice dev, UInt8 dest[4], UInt8 protocol, UIntPtr len, PUInt8 buf);
 PARPIPv4Socket NetAddARPIPv4Socket(PNetworkDevice dev, UInt8 mac[6], UInt8 ipv4[4], Boolean user);
 Void NetRemoveARPIPv4Socket(PARPIPv4Socket sock);
 Void NetSendARPIPv4Socket(PARPIPv4Socket sock, UInt16 opcode);

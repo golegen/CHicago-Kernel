@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:36 BRT
-// Last edited on December 14 of 2018, at 19:10 BRT
+// Last edited on December 15 of 2018, at 20:57 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -63,6 +63,7 @@ PNetworkDevice NetAddDevice(PVoid priv, UInt8 mac[6], Void (*send)(PVoid, UIntPt
 	
 	StrCopyMemory(dev->mac_address, mac, 6);																										// The mac address
 	StrSetMemory(dev->ipv4_address, 0, 4);																											// For now we don't have a IPv4 address :(
+	StrSetMemory((PUInt8)dev->arp_cache, 0, sizeof(ARPCache) * 32);																					// Clean the ARP cache
 	
 	dev->send = send;																																// And the send function
 	dev->packet_queue = QueueNew(False);																											// Create the packet queue
@@ -147,7 +148,7 @@ Void NetDevicePushPacket(PNetworkDevice dev, PUInt8 packet) {
 	
 	PsLock(&dev->packet_queue_wlock);																												// Lock
 	QueueAdd(dev->packet_queue, packet);																											// Add this packet
-	PsUnlock(&dev->packet_queue_rlock);																												// Unlock
+	PsUnlock(&dev->packet_queue_wlock);																												// Unlock
 }
 
 PUInt8 NetDevicePopPacket(PNetworkDevice dev) {
@@ -191,7 +192,12 @@ Void NetSendEthPacket(PNetworkDevice dev, UInt8 dest[6], UInt16 type, UIntPtr le
 	
 	frame->type = ToNetByteOrder16(type);																											// Set the type
 	
-	dev->send(dev->priv, sizeof(EthFrame) + len, (PUInt8)frame);																					// SEND!
+	if (StrCompareMemory(dest, dev->mac_address, 6)) {																								// Trying to send to yourself?
+		NetDevicePushPacket(dev, (PUInt8)frame);																									// Yes, you're probably very lonely :´(
+	} else {
+		dev->send(dev->priv, sizeof(EthFrame) + len, (PUInt8)frame);																				// SEND!
+	}
+	
 	MemFree((UIntPtr)frame);																														// Free our eth frame
 }
 
@@ -218,6 +224,108 @@ Void NetSendARPIPv4Packet(PNetworkDevice dev, UInt8 destm[6], UInt8 desti[4], UI
 	StrCopyMemory(hdr->ipv4.src_pr, dev->ipv4_address, 4);																							// And the source ipv4 address
 	NetSendEthPacket(dev, destm, ETH_TYPE_ARP, sizeof(ARPHeader), (PUInt8)hdr);																		// Send!
 	MemFree((UIntPtr)hdr);																															// And free the header	
+}
+
+static Boolean NetResolveIPv4Address(PNetworkDevice dev, UInt8 ip[4], PUInt8 dest) {
+	UInt8 broadcast[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+	UIntPtr last = 0;
+	UIntPtr count = 0;
+	
+	if ((ip[0] != 10) && ((ip[0] != 172) || ((ip[1] < 16) || (ip[1] > 31))) && ((ip[0] == 192) && (ip[1] == 168))) {								// First, let's check if we really need to use arp to get the mac address
+		StrCopyMemory(dest, broadcast, 6);																											// Nope, it's outside of the local network, the network card should do everything
+		return True;
+	} else if ((ip[0] == 127) && (ip[1] == 0) && (ip[2] == 0) && (ip[3] == 1)) {																	// Loopback/localhost?
+		StrCopyMemory(dest, dev->mac_address, 6);																									// Yes
+		return True;
+	}
+	
+	for (last = 0; last < 32; last++) {																												// First, let's see if we don't have this entry in our cache
+		if (!dev->arp_cache[last].free && StrCompareMemory(dev->arp_cache[last].ipv4_address, ip, 4)) {												// Found?
+			StrCopyMemory(dest, dev->arp_cache[last].mac_address, 6);																				// Yes! Return it
+			return True;
+		} else if (dev->arp_cache[last].free) {
+			break;																																	// ... end of the list
+		}
+	}
+	
+	NetSendARPIPv4Packet(dev, broadcast, ip, ARP_OPC_REQUEST);																						// Let's try to send an arp request
+	
+	while (True) {
+		PsSleep(10);																																// ... wait 10ms
+		
+		for (UIntPtr i = (last >= 32) ? 31 : last; i < 32; i++) {																					// And let's see if we found it!
+			if (!dev->arp_cache[i].free && StrCompareMemory(dev->arp_cache[i].ipv4_address, ip, 4)) {												// Found?
+				StrCopyMemory(dest, dev->arp_cache[i].mac_address, 6);																				// Yes! Return it
+				return True;
+			} else if (dev->arp_cache[i].free) {
+				last = i;																															// ... end of the list
+				break;
+			}
+		}
+		
+		count++;																																	// Increase the counts
+		
+		if (count > 5) {																															// We're only going to try 5 times
+			return False;																															// ... we failed
+		}
+		
+		NetSendARPIPv4Packet(dev, broadcast, ip, ARP_OPC_REQUEST);																					// And try again
+	}
+	
+	return False;																																	// We should never get here...
+}
+
+Void NetSendIPv4Packet(PNetworkDevice dev, UInt8 dest[4], UInt8 protocol, UIntPtr len, PUInt8 buf) {
+	if ((dev == Null) || (dest == Null)) {																											// Sanity checks
+		return;
+	}
+	
+	UInt8 destm[6];																																	// Let's try to resolve the IPv4 address
+	
+	if (!NetResolveIPv4Address(dev, dest, destm)) {
+		return;																																		// Failed :(
+	}
+	
+	PIPHeader hdr = (PIPHeader)MemAllocate(20 + len);																								// Let's build our IPv4 header
+	
+	if (hdr == Null) {
+		return;																																		// Failed :(
+	}
+	
+	hdr->ihl = 5;																																	// "Default" value
+	hdr->version = 4;																																// IPv4
+	hdr->ecn = 0;																																	// Don't care about this
+	hdr->dscp = 0;																																	// And don't care about this for now
+	hdr->length = ToNetByteOrder16((20 + len));																										// Header length + data length
+	hdr->id = 0;																																	// We're not going to support fragmentation for now
+	hdr->flags = 0;
+	hdr->frag_off = 0;
+	hdr->ttl = 64;																																	// Time To Live = 64
+	hdr->protocol = protocol;																														// Set the protocol
+	hdr->checksum = 0;																																// Let's set it later
+	
+	StrCopyMemory(hdr->ipv4.src, dev->ipv4_address, 4);																								// Set the src ipv4 addresss (our address)
+	StrCopyMemory(hdr->ipv4.dst, dest, 4);																											// And the dest ipv4 address
+	
+	PUInt8 data = (PUInt8)hdr;																														// Calculate the checksum!
+	UInt32 acc = 0xFFFF;
+	
+	for (UIntPtr i = 0; (i + 1) < 20; i += 2) {
+		UInt16 word;
+		
+		StrCopyMemory(((PUInt8)&word), data + i, 2);
+		acc += FromNetByteOrder16(word);
+		
+		if (acc > 0xFFFF) {
+			acc -= 0xFFFF;
+		}
+	}
+	
+	hdr->checksum = ToNetByteOrder16(((UInt16)acc));																								// And set it
+	
+	StrCopyMemory(data + 20, buf, len);																												// Copy the data
+	NetSendEthPacket(dev, destm, ETH_TYPE_IP, 20 + len, data);																						// Send the packet!
+	MemFree((UIntPtr)hdr);																															// And free everything
 }
 
 PARPIPv4Socket NetAddARPIPv4Socket(PNetworkDevice dev, UInt8 mac[6], UInt8 ipv4[4], Boolean user) {
@@ -329,6 +437,35 @@ static Void NetHandleARPPacket(PNetworkDevice dev, PARPHeader hdr) {
 		return;
 	} else if (FromNetByteOrder16(hdr->ptype) != ETH_TYPE_IP) {
 		return;
+	}
+	
+	Boolean add = True;
+	
+	for (UIntPtr i = 0; i < 32; i++) {																												// Let's update the arp cache!
+		if (!dev->arp_cache[i].free && StrCompareMemory(dev->arp_cache[i].ipv4_address, hdr->ipv4.src_pr, 4)) {										// Update this one?
+			StrCopyMemory(dev->arp_cache[i].mac_address, hdr->ipv4.src_hw, 6);																		// Yes :)
+			add = False;
+			break;
+		}
+	}
+	
+	if (add) {																																		// Add this entry to the cache?
+		for (UIntPtr i = 0; i < 32; i++) {																											// Yes :)
+			if (dev->arp_cache[i].free) {																											// This entry is free?
+				add = False;
+				dev->arp_cache[i].free = False;																										// Yes, but now we're using it
+				
+				StrCopyMemory(dev->arp_cache[i].mac_address, hdr->ipv4.src_hw, 6);																	// Set the mac address
+				StrCopyMemory(dev->arp_cache[i].ipv4_address, hdr->ipv4.src_pr, 4);																	// And the ipv4 address
+				
+				break;
+			}
+		}
+		
+		if (add) {
+			StrCopyMemory(dev->arp_cache[31].mac_address, hdr->ipv4.src_hw, 6);																		// ... We're going to use the last entry, set the mac address
+			StrCopyMemory(dev->arp_cache[31].ipv4_address, hdr->ipv4.src_pr, 4);																	// And the ipv4 address
+		}
 	}
 	
 	if (StrCompareMemory(dev->ipv4_address, hdr->ipv4.dst_pr, 4)) {																					// For us?
