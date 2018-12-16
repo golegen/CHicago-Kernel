@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on December 15 of 2018, at 19:01 BRT
+// Last edited on December 16 of 2018, at 18:49 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -80,5 +80,5 @@ Void KernelMainLate(Void) {
 	ConWriteFormated(NlsGetMessage(NLS_OS_VSTR), CHICAGO_MAJOR, CHICAGO_MINOR, CHICAGO_BUILD);
 	
 	ShellRun();																												// Run the shell!
-	while (True) { PsSwitchTask(Null); }																					// Halt
+	while (True) { PsSwitchTask(PsDontRequeue); }																			// Don't requeue us
 }

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 16 of 2018, at 13:12 BRT
+// Last edited on December 16 of 2018, at 18:06 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -292,9 +292,16 @@ static Void ShellMain(Void) {
 				}
 
 				NetSendARPIPv4Socket(sock, ARP_OPC_REQUEST);																							// Send the REQUEST command
-				MemFree((UIntPtr)NetReceiveARPIPv4Socket(sock));																						// Wait for the REPLY
+				PARPHeader res = NetReceiveARPIPv4Socket(sock);																							// Wait for the REPLY
+				
 				NetRemoveARPIPv4Socket(sock);																											// Remove the socket
-				ConWriteFormated(NlsGetMessage(NLS_SHELL_PING_REPLY), argv[1]);
+				
+				if (res == Null) {																														// Good reply?
+					ConWriteFormated(NlsGetMessage(NLS_SHELL_PING_REPLY2), argv[1]);																	// Nope :(
+				} else {
+					ConWriteFormated(NlsGetMessage(NLS_SHELL_PING_REPLY1), argv[1]);																	// Yes :)
+					MemFree((UIntPtr)res);
+				}
 				
 				continue;
 			}
@@ -340,9 +347,16 @@ static Void ShellMain(Void) {
 			}
 			
 			NetSendARPIPv4Socket(sock, ARP_OPC_REQUEST);																								// Send the REQUEST command
-			MemFree((UIntPtr)NetReceiveARPIPv4Socket(sock));																							// Wait for the REPLY
+			PARPHeader res = NetReceiveARPIPv4Socket(sock);																								// Wait for the REPLY
+			
 			NetRemoveARPIPv4Socket(sock);																												// Remove the socket
-			ConWriteFormated(NlsGetMessage(NLS_SHELL_PING_REPLY), argv[2]);
+			
+			if (res == Null) {																															// Good reply?
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_PING_REPLY2), argv[2]);																		// Nope :(
+			} else {
+				ConWriteFormated(NlsGetMessage(NLS_SHELL_PING_REPLY1), argv[2]);																		// Yes :)
+				MemFree((UIntPtr)res);
+			}
 		} else if (StrGetLength(argv[0]) == 2 && StrCompare(argv[0], L"ps")) {																			// List all the processes
 			ConSetRefresh(False);																														// Disable screen refresh
 			

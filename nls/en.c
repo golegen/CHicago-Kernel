@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:27 BRT
-// Last edited on December 16 of 2018, at 13:15 BRT
+// Last edited on December 16 of 2018, at 18:48 BRT
 
 #include <chicago/types.h>
 
@@ -48,6 +48,8 @@ PWChar NlsMessagesEn[] = {
 	
 	L"%s response was successfully received\r\n\r\n",
 	
+	L"Couldn't get %s response\r\n\r\n",
+	
 	L"<Unamed>",
 	
 	L"Name: %s | ID: %d | Threads: %d | Memory Usage: %d %s\r\n%s",
@@ -60,9 +62,9 @@ PWChar NlsMessagesEn[] = {
 	
 	L"Invalid IPv4 address\r\n\r\n",
 	
-	L"Default network device isn't set\r\n\r\n",
-	
 	L"Usage: %s [device]\r\n\r\n",
+	
+	L"Default network device isn't set\r\n\r\n",
 	
 	L"Invalid command: '%s'\r\n\r\n"
 };

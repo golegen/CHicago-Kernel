@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 27 of 2018, at 18:28 BRT
-// Last edited on October 27 of 2018, at 18:32 BRT
+// Last edited on October 27 of 2018, at 18:38 BRT
 
 #include <chicago/queue.h>
 
@@ -18,5 +18,9 @@ Boolean QueueAdd(PQueue queue, PVoid data) {
 }
 
 PVoid QueueRemove(PQueue queue) {
-	return ListRemove(queue, queue->length - 1);		// Redirect to ListRemove
+	if (queue->length > 0) {
+		return ListRemove(queue, queue->length - 1);	// Redirect to ListRemove
+	} else {
+		return Null;
+	}
 }

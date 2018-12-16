@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:36 BRT
-// Last edited on December 16 of 2018, at 12:48 BRT
+// Last edited on December 16 of 2018, at 18:46 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -477,7 +477,13 @@ PARPHeader NetReceiveARPIPv4Socket(PARPIPv4Socket sock) {
 		return Null;
 	}
 	
+	UIntPtr count = 0;
+	
 	while (sock->packet_queue->length == 0) {																															// Wait the packet that we want :)
+		if (++count == 5) {																																				// Only 5 "tries"
+			return Null;
+		}
+		
 		PsSwitchTask(Null);
 	}
 	

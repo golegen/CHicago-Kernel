@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:27 BRT
-// Last edited on December 16 of 2018, at 13:09 BRT
+// Last edited on December 16 of 2018, at 18:48 BRT
 
 #include <chicago/types.h>
 
@@ -48,6 +48,8 @@ PWChar NlsMessagesBr[] = {
 	
 	L"Resposta de %s foi recebida com sucesso\r\n\r\n",
 	
+	L"Não foi possivel obter uma resposta de %s\r\n\r\n",
+	
 	L"<Sem Nome>",
 	
 	L"Nome: %s | ID: %d | Threads: %d | Uso de Memória: %d %s\r\n%s",
@@ -60,9 +62,9 @@ PWChar NlsMessagesBr[] = {
 	
 	L"Endereço IPv4 invalido\r\n\r\n",
 	
-	L"Dispositivo de rede padrão não foi definido\r\n\r\n",
-	
 	L"Uso: %s [dispositivo]\r\n\r\n",
+	
+	L"Dispositivo de rede padrão não foi definido\r\n\r\n",
 	
 	L"Comando inválido: '%s'\r\n\r\n"
 };

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:59 BRT
-// Last edited on December 16 of 2018, at 14:09 BRT
+// Last edited on December 16 of 2018, at 18:44 BRT
 
 #define __CHICAGO_PROCESS__
 
@@ -206,23 +206,9 @@ Void PsSleep(UIntPtr ms) {
 	} else if ((PsSleepList == Null) || (PsThreadQueue == Null) || (PsCurrentThread == Null)) {													// Sleep list is initialized?
 		TimerSleep(ms);																															// Nope
 		return;
-	} else if (PsThreadQueue->length == 0) {																									// We have any thread in the queue?
-		TimerSleepProcess(ms);																													// Nope
-		return;
 	}
 	
-	PsLockTaskSwitch(old);																														// Lock
-	
-	if (!ListAdd(PsSleepList, PsCurrentThread)) {																								// Try to add it to the sleep list
-		PsUnlockTaskSwitch(old);																												// Failed
-		TimerSleepProcess(ms);
-		return;
-	}
-	
-	PsCurrentThread->wtime = ms - 1;
-	
-	PsUnlockTaskSwitch(old);																													// Unlock
-	PsSwitchTask(PsDontRequeue);																												// Remove it from the queue and go to the next thread
+	TimerSleepProcess(ms);																														// TODO: Fix the PsWakeup bug...
 }
 
 UIntPtr PsWaitThread(UIntPtr id) {
@@ -574,7 +560,7 @@ Void PsWakeup(PList list, PThread th) {
 	th->waitt = Null;
 	th->waitp = Null;
 	
-	QueueAdd(PsThreadQueue, th);
+	ListAdd(PsThreadQueue, th);
 	PsUnlockTaskSwitch(old);
 }
 

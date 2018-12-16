@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 28 of 2018, at 01:09 BRT
-// Last edited on December 16 of 2018, at 14:04 BRT
+// Last edited on December 16 of 2018, at 18:43 BRT
 
 #define __CHICAGO_ARCH_PROCESS__
 
@@ -62,13 +62,50 @@ Void PsFreeContext(PContext ctx) {
 	MemFree((UIntPtr)ctx);																							// Just MemFree the ctx!
 }
 
+Void PsSwitchTaskForce(PRegisters regs) {
+	if ((PsThreadQueue == Null) || (PsThreadQueue->length == 0) || (!PsTaskSwitchEnabled)) {						// We can switch?
+		return;																										// Nope
+	}
+	
+	PThread old = PsCurrentThread;																					// Save the old thread
+	
+	PsCurrentThread = QueueRemove(PsThreadQueue);																	// Get the next thread
+	
+	if (old != Null) {																								// Save the old thread info?
+		PsCurrentThread->time += old->time;																			// Yes, give the quantum of the old process to the new one!
+		old->time = PS_DEFAULT_QUANTUM - 1;																			// And set the default quantum to the old thread
+		old->ctx->esp = (UIntPtr)regs;																				// Save the old context
+		Asm Volatile("fxsave (%0)" :: "r"(PsFPUStateSave));															// And the old fpu state
+		StrCopyMemory(old->ctx->fpu_state, PsFPUStateSave, 512);
+		QueueAdd(PsThreadQueue, old);																				// And add the old process to the queue again
+	}
+	
+	GDTSetKernelStack((UInt32)(PsCurrentThread->ctx->kstack));														// Switch the kernel stack in the tss
+	StrCopyMemory(PsFPUStateSave, PsCurrentThread->ctx->fpu_state, 512);											// And load the new fpu state
+	Asm Volatile("fxrstor (%0)" :: "r"(PsFPUStateSave));
+	
+	if (((old != Null) && (PsCurrentProcess->dir != old->parent->dir)) || (old == Null)) {							// Switch the page dir
+		MmSwitchDirectory(PsCurrentProcess->dir);
+	}
+	
+	Asm Volatile("mov %%eax, %%esp" :: "a"(PsCurrentThread->ctx->esp));												// And let's switch!
+	Asm Volatile("pop %gs");
+	Asm Volatile("pop %fs");
+	Asm Volatile("pop %es");
+	Asm Volatile("pop %ds");
+	Asm Volatile("popa");
+	Asm Volatile("add $8, %esp");
+	Asm Volatile("iret");
+}
+
 Void PsSwitchTaskTimer(PRegisters regs) {
 	if (PsSleepList != Null) {																						// Remember that this function is called each 1ms :)
-		ListForeach(PsSleepList, i) {
+start:	ListForeach(PsSleepList, i) {
 			PThread th = (PThread)i->data;
 			
 			if (th->wtime == 0) {																					// Wakeup?
 				PsWakeup(PsSleepList, th);																			// Yes :)
+				goto start;																							// Go back to the start!
 			} else {
 				th->wtime--;																						// Nope, just decrese the wtime counter
 			}
@@ -100,42 +137,6 @@ Void PsSwitchTaskTimer(PRegisters regs) {
 	}
 	
 	PortOutByte(0x20, 0x20);																						// Send EOI
-	Asm Volatile("mov %%eax, %%esp" :: "a"(PsCurrentThread->ctx->esp));												// And let's switch!
-	Asm Volatile("pop %gs");
-	Asm Volatile("pop %fs");
-	Asm Volatile("pop %es");
-	Asm Volatile("pop %ds");
-	Asm Volatile("popa");
-	Asm Volatile("add $8, %esp");
-	Asm Volatile("iret");
-}
-
-Void PsSwitchTaskForce(PRegisters regs) {
-	if ((PsThreadQueue == Null) || (PsThreadQueue->length == 0) || (!PsTaskSwitchEnabled)) {						// We can switch?
-		return;																										// Nope
-	}
-	
-	PThread old = PsCurrentThread;																					// Save the old thread
-	
-	PsCurrentThread = QueueRemove(PsThreadQueue);																	// Get the next thread
-	
-	if (old != Null) {																								// Save the old thread info?
-		PsCurrentThread->time += old->time;																			// Yes, give the quantum of the old process to the new one!
-		old->time = PS_DEFAULT_QUANTUM - 1;																			// And set the default quantum to the old thread
-		old->ctx->esp = (UIntPtr)regs;																				// Save the old context
-		Asm Volatile("fxsave (%0)" :: "r"(PsFPUStateSave));															// And the old fpu state
-		StrCopyMemory(old->ctx->fpu_state, PsFPUStateSave, 512);
-		QueueAdd(PsThreadQueue, old);																				// And add the old process to the queue again
-	}
-	
-	GDTSetKernelStack((UInt32)(PsCurrentThread->ctx->kstack));														// Switch the kernel stack in the tss
-	StrCopyMemory(PsFPUStateSave, PsCurrentThread->ctx->fpu_state, 512);											// And load the new fpu state
-	Asm Volatile("fxrstor (%0)" :: "r"(PsFPUStateSave));
-	
-	if (((old != Null) && (PsCurrentProcess->dir != old->parent->dir)) || (old == Null)) {							// Switch the page dir
-		MmSwitchDirectory(PsCurrentProcess->dir);
-	}
-	
 	Asm Volatile("mov %%eax, %%esp" :: "a"(PsCurrentThread->ctx->esp));												// And let's switch!
 	Asm Volatile("pop %gs");
 	Asm Volatile("pop %fs");

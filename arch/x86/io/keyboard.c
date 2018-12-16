@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 12 of 2018, at 23:10 BRT
-// Last edited on December 16 of 2018, at 14:57 BRT
+// Last edited on December 16 of 2018, at 18:51 BRT
 
 #include <chicago/arch/idt.h>
 #include <chicago/arch/port.h>
@@ -43,6 +43,9 @@ static Void KeyboardHandler(PRegisters regs) {
 static Void KeyboardThread(Void) {
 	UInt8 sc;
 	
+	ConsoleDeviceClearKeyboard();																	// Clear the buffers
+	RawKeyboardDeviceClear();
+	
 	while (True) {
 		RawKeyboardDeviceRead(1, &sc);																// Read the key
 		
@@ -64,7 +67,7 @@ static Void KeyboardThread(Void) {
 			KbdCtrl = !KbdCtrl;
 		} else {
 			Boolean shft = KbdShft ^ KbdCaps;
-			Char ch = shft ? KbdKeymapShift[sc] : KbdKeymapNormal[sc];							// Ok, it's a normal key... get the character from the keymap
+			Char ch = shft ? KbdKeymapShift[sc] : KbdKeymapNormal[sc];								// Ok, it's a normal key... get the character from the keymap
 
 			if (ch == '\b') {																		// Backspace?
 				if (ConsoleDeviceBackKeyboard()) {													// Yes, do it!
