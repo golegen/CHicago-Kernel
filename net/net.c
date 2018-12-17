@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 12 of 2018, at 12:36 BRT
-// Last edited on December 16 of 2018, at 18:46 BRT
+// Last edited on December 17 of 2018, at 14:58 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -480,11 +480,11 @@ PARPHeader NetReceiveARPIPv4Socket(PARPIPv4Socket sock) {
 	UIntPtr count = 0;
 	
 	while (sock->packet_queue->length == 0) {																															// Wait the packet that we want :)
-		if (++count == 5) {																																				// Only 5 "tries"
+		if (++count == 401) {																																			// Our timeout is 4 seconds
 			return Null;
 		}
 		
-		PsSwitchTask(Null);
+		PsSleep(10);																																					// Sleep 10ms
 	}
 	
 	return (PARPHeader)QueueRemove(sock->packet_queue);																													// Now, return it!
@@ -588,8 +588,14 @@ PIPHeader NetReceiveUDPSocket(PUDPSocket sock) {
 		return Null;
 	}
 	
+	UIntPtr count = 0;
+	
 	while (sock->packet_queue->length == 0) {																															// Wait the packet that we want :)
-		PsSwitchTask(Null);
+		if (++count == 401) {																																			// Our timeout is 4 seconds
+			return Null;
+		}
+		
+		PsSleep(10);																																					// Sleep 10ms
 	}
 	
 	return (PIPHeader)QueueRemove(sock->packet_queue);																													// Now, return it!
