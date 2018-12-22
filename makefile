@@ -1,7 +1,7 @@
 # File author is Ítalo Lima Marconato Matias
 #
 # Created on May 11 of 2018, at 13:14 BRT
-# Last edited on December 16 of 2018, at 12:11 BRT
+# Last edited on December 22 of 2018, at 13:41 BRT
 
 ARCH ?= x86
 VERBOSE ?= false
@@ -11,11 +11,15 @@ PATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../toolchain/$
 SHELL := env PATH=$(PATH) /bin/bash
 
 ifeq ($(ARCH),x86)
-	TARGET ?= i686-chicago
+	TARGET ?= i686-elf
+	SUBARCH ?= pc
+	
 	ARCH_CFLAGS := -DCHEXEC_ARCH=CHEXEC_HEADER_FLAGS_ARCH_X86
 	
-	ifneq ($(SUBARCH),)
+	ifneq ($(SUBARCH),pc)
+	ifneq ($(SUBARCH),efi)
 		UNSUPPORTED_ARCH := true
+	endif
 	endif
 	
 	ARCH_OBJECTS := start.s.o
@@ -51,9 +55,9 @@ OBJECTS += sys/sc.c.o sys/shell.c.o sys/string.c.o
 
 OTHER_OBJECTS := font.psf splash.bmp
 
-ARCH_OBJECTS := $(addprefix build/arch/$(ARCH)/,$(ARCH_OBJECTS))
-OBJECTS := $(addprefix build/,$(OBJECTS))
-OTHER_OBJECTS := $(addsuffix .oo, $(addprefix build/,$(OTHER_OBJECTS)))
+ARCH_OBJECTS := $(addprefix build/$(ARCH)_$(SUBARCH)/arch/$(ARCH)/,$(ARCH_OBJECTS))
+OBJECTS := $(addprefix build/$(ARCH)_$(SUBARCH)/,$(OBJECTS))
+OTHER_OBJECTS := $(addsuffix .oo, $(addprefix build/$(ARCH)_$(SUBARCH)/,$(OTHER_OBJECTS)))
 LINKER_SCRIPT := arch/$(ARCH)/$(LINKER_SCRIPT)
 
 ifeq ($(SUBARCH),)
@@ -70,62 +74,62 @@ all: $(KERNEL)
 
 clean:
 ifeq ($(UNSUPPORTED_ARCH),true)
-	$(error Unsupported architecture $(ARCH))
+	$(error Unsupported architecture $(ARCH), subarch $(SUBARCH))
 endif
 	$(NOECHO)rm -f $(ARCH_OBJECTS) $(OBJECTS) $(OTHER_OBJECTS) $(KERNEL)
 
 clean-all:
 ifeq ($(UNSUPPORTED_ARCH),true)
-	$(error Unsupported architecture $(ARCH))
+	$(error Unsupported architecture $(ARCH), subarch $(SUBARCH))
 endif
 	$(NOECHO)rm -rf build
 
 remake: clean all
 ifeq ($(UNSUPPORTED_ARCH),true)
-	$(error Unsupported architecture $(ARCH))
+	$(error Unsupported architecture $(ARCH), subarch $(SUBARCH))
 endif
 
 $(KERNEL): $(ARCH_OBJECTS) $(OBJECTS) $(OTHER_OBJECTS) $(LINKER_SCRIPT)
 ifeq ($(UNSUPPORTED_ARCH),true)
-	$(error Unsupported architecture $(ARCH))
+	$(error Unsupported architecture $(ARCH), subarch $(SUBARCH))
 endif
 	$(NOECHO)echo Linking $@
 	$(NOECHO)if [ ! -d $(dir $@) ]; then mkdir -p $(dir $@); fi
-	$(NOECHO)$(TARGET)-gcc -T$(LINKER_SCRIPT) -fno-pie -no-pie -ffreestanding -nostdlib -o $@ $(ARCH_OBJECTS) $(OBJECTS) $(OTHER_OBJECTS) $(ARCH_LDFLAGS) -lgcc
+	$(NOECHO)$(TARGET)-gcc -T$(LINKER_SCRIPT) -ffreestanding -nostdlib -o $@ $(ARCH_OBJECTS) $(OBJECTS) $(OTHER_OBJECTS) $(ARCH_LDFLAGS) -lgcc
 
-build/%.oo: %
+build/$(ARCH)_$(SUBARCH)/%.oo: %
 ifeq ($(UNSUPPORTED_ARCH),true)
-	$(error Unsupported architecture $(ARCH))
+	$(error Unsupported architecture $(ARCH), subarch $(SUBARCH))
 endif
 	$(NOECHO)echo Compiling $<
 	$(NOECHO)if [ ! -d $(dir $@) ]; then mkdir -p $(dir $@); fi
 	$(NOECHO)$(TARGET)-objcopy -Ibinary -O$(OBJCOPY_FORMAT) -B$(OBJCOPY_ARCH) $< $@
 	$(NOECHO)$(TARGET)-objcopy --rename-section .data=.rodata,alloc,load,readonly,data,contents $@ $@
 
-build/%.s.o: %.s
+build/$(ARCH)_$(SUBARCH)/%.s.o: %.s
 ifeq ($(UNSUPPORTED_ARCH),true)
-	$(error Unsupported architecture $(ARCH))
+	$(error Unsupported architecture $(ARCH), subarch $(SUBARCH))
 endif
 	$(NOECHO)echo Compiling $<
 	$(NOECHO)if [ ! -d $(dir $@) ]; then mkdir -p $(dir $@); fi
 	$(NOECHO)$(TARGET)-as $(ARCH_AFLAGS) $< -o $@
 
-build/%.c.o: %.c
+build/$(ARCH)_$(SUBARCH)/%.c.o: %.c
 ifeq ($(UNSUPPORTED_ARCH),true)
-	$(error Unsupported architecture $(ARCH))
+	$(error Unsupported architecture $(ARCH), subarch $(SUBARCH))
 endif
 	$(NOECHO)echo Compiling $<
 	$(NOECHO)if [ ! -d $(dir $@) ]; then mkdir -p $(dir $@); fi
 ifeq ($(SUBARCH),)
 ifeq ($(DEBUG),yes)
-	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -DDEBUG -g -std=c11 -Iinclude -Iarch/$(ARCH)/include -fno-pie -no-pie -ffreestanding -O0 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
+	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -DDEBUG -g -std=c11 -Iinclude -Iarch/$(ARCH)/include -ffreestanding -O0 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
 else
-	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -std=c11 -Iinclude -Iarch/$(ARCH)/include -fno-pie -no-pie -ffreestanding -O3 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
+	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -std=c11 -Iinclude -Iarch/$(ARCH)/include -ffreestanding -O3 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
 endif
 else
 ifeq ($(DEBUG),yes)
-	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -DDEBUG -g -std=c11 -Iinclude -Iarch/$(ARCH)/include -I arch/$(ARCH)/subarch/$(SUBARCH)/include -fno-pie -no-pie -ffreestanding -O0 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
+	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -DDEBUG -g -std=c11 -Iinclude -Iarch/$(ARCH)/include -I arch/$(ARCH)/subarch/$(SUBARCH)/include -ffreestanding -O0 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
 else
-	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -std=c11 -Iinclude -Iarch/$(ARCH)/include -I arch/$(ARCH)/subarch/$(SUBARCH)/include -fno-pie -no-pie -ffreestanding -O3 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
+	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -std=c11 -Iinclude -Iarch/$(ARCH)/include -I arch/$(ARCH)/subarch/$(SUBARCH)/include -ffreestanding -O3 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
 endif
 endif

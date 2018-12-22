@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 23:40 BRT
-// Last edited on December 09 of 2018, at 18:17 BRT
+// Last edited on December 22 of 2018, at 16:59 BRT
 
 #include <chicago/arch/ide.h>
 #include <chicago/arch/idt.h>
@@ -318,20 +318,19 @@ UIntPtr IDEGetBlockSize(UInt8 bus, UInt8 drive) {
 	}
 }
 
-Void IDEInitializeInt(UInt32 bus, UInt32 drive)
-{
+Void IDEInitializeInt(UInt32 bus, UInt32 drive) {
 	UInt16 io = 0;
 	Boolean atapi = False;
 	
 	IDEDevices[(bus * 2) + drive].valid = False;																// For now, let's assume that there is no drive here
-	
-	IDESelectDrive(bus, drive);																					// Select drive
 	
 	if (bus == 0) {																								// Primary or secundary drive?
 		io = 0x1F0;																								// Primary
 	} else {
 		io = 0x170;																								// Secundary
 	}
+	
+	IDESelectDrive(bus, drive);																					// Select drive
 	
 	PortOutByte(io + ATA_REG_SECCOUNT0, 0);																		// These values should be zero before sending IDENTIFY
 	PortOutByte(io + ATA_REG_LBA0, 0);
@@ -526,6 +525,16 @@ Boolean IDEDeviceControl(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf) {
 }
 
 Void IDEInit(Void) {
+	for (UInt16 i = 0, j = 0x3F6, k = 0x1F0; i < 2; i++, j -= 0x80, k -= 0x80) {								// We need to reset the drives, as the bios/(u)efi may fuck up them, and make us unable to receive ide irqs
+		PortOutByte(j, 4);																						// Let's reset this drive
+
+		for (UInt32 i = 0; i < 4; i++) {																		// 400 nanoseconds delay
+			PortInByte(k + ATA_REG_ALTSTATUS);
+		}
+
+		PortOutByte(j, 0);
+	}
+	
 	PortOutByte(0x1F0 + ATA_REG_CONTROL, 2);																	// Disable IRQs
 	PortOutByte(0x170 + ATA_REG_CONTROL, 2);
 	
