@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:21 BRT
-// Last edited on December 22 of 2018, at 16:23 BRT
+// Last edited on January 17 of 2019, at 11:56 BRT
 
 #include <chicago/arch/bootmgr.h>
 #include <chicago/arch/gdt.h>
@@ -34,6 +34,7 @@ Void ArchInitFPU(Void) {
 	UInt16 cw0 = 0x37E;
 	UInt16 cw1 = 0x37A;
 	UIntPtr cr0;
+	UIntPtr cr4;
 	UIntPtr d;
 	
 	if (!CPUIDCheck()) {																						// Let's check if we can use the CPUID instruction
@@ -46,13 +47,20 @@ Void ArchInitFPU(Void) {
 	if (!(d & (1 << 0))) {																						// FPU avaliable?
 		DbgWriteFormated("PANIC! FPU isn't avaliable\r\n");														// Nope
 		ArchHalt();																								// Halt
+	} else if (!(d & (1 << 26))) {																				// SSE(2) avaliable?
+		DbgWriteFormated("PANIC! SSE isn't avaliable\r\n");														// Nope
+		ArchHalt();																								// Halt
 	}
 	
-	Asm Volatile("mov %%cr0, %0" : "=r"(cr0));
+	Asm Volatile("mov %%cr0, %0" : "=r"(cr0));																	// Read the CR0
+	Asm Volatile("mov %%cr4, %0" : "=r"(cr4));																	// Read the CR4
 	
-	cr0 &= ~(1 << 3);																							// Disable the EMulation bit
+	cr0 &= ~(1 << 2);																							// Disable the EMulation bit
+	cr0 |= 1 << 1;																								// Set the Monitor co-Processor bit
+	cr4 |= (1 << 9) | (1 << 10);																				// Set the OS support for FXsave and fxrStoR instructions bit and the OS support for unMasked siMd floating point EXCPTions bit
 	
-	Asm Volatile("mov %0, %%cr0" :: "r"(cr0));
+	Asm Volatile("mov %0, %%cr0" :: "r"(cr0));																	// Write the new CR0
+	Asm Volatile("mov %0, %%cr4" :: "r"(cr4));																	// Write the new CR4
 	Asm Volatile("fninit");																						// Write some initial FPU settings
 	Asm Volatile("fldcw %0" :: "m"(cw0));																		// Invalid operand exceptions enabled
 	Asm Volatile("fldcw %0" :: "m"(cw1));																		// Both division-by-zero and invalid operands cause exceptions

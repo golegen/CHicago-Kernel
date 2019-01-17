@@ -1,42 +1,53 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 15 of 2018, at 19:05 BRT
-// Last edited on December 09 of 2018, at 19:08 BRT
+// Last edited on January 17 of 2019, at 12:20 BRT
 
 #include <chicago/alloc.h>
 
-PVoid StrCopyMemory(PVoid dest, PVoid src, UIntPtr count) {
+PVoid StrCopyMemory(PVoid restrict dest, PVoid restrict src, UIntPtr count) {
 	if ((dest == Null) || (src == Null) || (count == 0) || (src == dest)) {			// Destination is an Null pointer? Source is an Null pointer? Zero-sized copy? Destination is Source?
 		return dest;																// Yes
 	}
 	
-	for (UIntPtr i = 0; i < count; i++) {											// GCC should optimize this for us :)
-		((PUInt8)dest)[i] = ((PUInt8)src)[i];
+	PUInt8 sr = src;
+	PUInt8 dst = dest;
+	
+	while (count--) {																// GCC should optimize this for us :)
+		*dst++ = *sr++;
 	}
 	
 	return dest;
 }
 
-PVoid StrCopyMemory24(PVoid dest, PVoid src, UIntPtr count) {
+PVoid StrCopyMemory24(PVoid restrict dest, PVoid restrict src, UIntPtr count) {
 	if ((dest == Null) || (src == Null) || (count == 0) || (src == dest)) {			// Destination is an Null pointer? Source is an Null pointer? Zero-sized copy? Destination is Source?
 		return dest;																// Yes
 	}
 	
-	for (UIntPtr i = 0; i < count; i++) {											// GCC should optimize this for us :)
-		*((PUInt16)(dest + (i * 3))) = *(PUInt16)(src + (i * 3));
-		*((PUInt8)(dest + (i * 3) + 2)) = *(PUInt8)(src + (i * 3) + 2);
+	PUInt8 src8 = src;
+	PUInt8 dst8 = dest;
+	PUInt16 src16 = src + 1;
+	PUInt16 dst16 = dest + 1;
+	
+	while (count--) {																// GCC should optimize this for us :)
+		*dst8++ = *src8++;
+		*dst16++ = *src16++;
 	}
 	
 	return dest;
 }
 
-PVoid StrCopyMemory32(PVoid dest, PVoid src, UIntPtr count) {
+PVoid StrCopyMemory32(PVoid restrict dest, PVoid restrict src, UIntPtr count) {
 	if ((dest == Null) || (src == Null) || (count == 0) || (src == dest)) {			// Destination is an Null pointer? Source is an Null pointer? Zero-sized copy? Destination is Source?
 		return dest;																// Yes
 	}
 	
-	for (UIntPtr i = 0; i < count; i++) {											// GCC should optimize this for us :)
-		((PUInt32)dest)[i] = ((PUInt32)src)[i];
+	PUInt32 sr = src;
+	PUInt32 dst = dest;
+	
+	while (count--) {																// GCC should optimize this for us :)
+		*dst++ = *sr++;
 	}
 	
 	return dest;
@@ -47,8 +58,10 @@ PVoid StrSetMemory(PVoid dest, UInt8 val, UIntPtr count) {
 		return dest;																// Yes
 	}
 	
-	for (UIntPtr i = 0; i < count; i++) {											// GCC should optimize this for us :)
-		((PUInt8)dest)[i] = val;
+	PUInt8 dst = dest;
+	
+	while (count--) {																// GCC should optimize this for us :)
+		*dst++ = val;
 	}
 	
 	return dest;
@@ -59,9 +72,14 @@ PVoid StrSetMemory24(PVoid dest, UInt32 val, UIntPtr count) {
 		return dest;																// Yes
 	}
 	
-	for (UIntPtr i = 0; i < count; i++) {											// GCC should optimize this for us :)
-		*((PUInt16)(dest + (i * 3))) = (UInt16)val;
-		*((PUInt8)(dest + (i * 3) + 2)) = (UInt8)(val << 16);
+	PUInt8 dst8 = dest;
+	PUInt16 dst16 = dest + 1;
+	UInt16 val16 = (UInt16)val;
+	UInt8 val8 = (UInt8)(val << 16);
+	
+	while (count--) {																// GCC should optimize this for us :)
+		*dst8++ = val8;
+		*dst16++ = val16;
 	}
 	
 	return dest;
@@ -72,14 +90,16 @@ PVoid StrSetMemory32(PVoid dest, UInt32 val, UIntPtr count) {
 		return dest;																// Yes
 	}
 	
-	for (UIntPtr i = 0; i < count; i++) {											// GCC should optimize this for us :)
-		((PUInt32)dest)[i] = val;
+	PUInt32 dst = dest;
+	
+	while (count--) {																// GCC should optimize this for us :)
+		*dst++ = val;
 	}
 	
 	return dest;
 }
 
-Boolean StrCompareMemory(PVoid m1, PVoid m2, UIntPtr count) {
+Boolean StrCompareMemory(PVoid restrict m1, PVoid restrict m2, UIntPtr count) {
 	if ((m1 == Null) || (m2 == Null) || (count == 0)) {								// m1 is an Null pointer? m2 is an Null pointer? Zero-sized compare?
 		return False;																// Yes
 	}
@@ -87,7 +107,7 @@ Boolean StrCompareMemory(PVoid m1, PVoid m2, UIntPtr count) {
 	PUInt8 mp1 = m1;
 	PUInt8 mp2 = m2;
 	
-	for (UIntPtr i = 0; i < count; i++) {											// GCC should optimize this for us :)
+	while (count--) {																// GCC should optimize this for us :)
 		if (*mp1++ != *mp2++) {
 			return False;
 		}

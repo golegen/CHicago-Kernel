@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 23:40 BRT
-// Last edited on December 22 of 2018, at 16:59 BRT
+// Last edited on January 17 of 2019, at 11:19 BRT
 
 #include <chicago/arch/ide.h>
 #include <chicago/arch/idt.h>
@@ -385,7 +385,7 @@ Void IDEInitializeInt(UInt32 bus, UInt32 drive) {
 		IDEDevices[(bus * 2) + drive].model[i + 1] = IDEBuffer[ATA_IDENT_MODEL + i];
 	}
 	
-	IDEDevices[(bus * 2) + drive].model[40] = 0;																// End disk model string
+	IDEDevices[(bus * 2) + drive].model[40] = 0;																// End disk model stringz
 }
 
 Boolean IDEDeviceRead(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
