@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 23:40 BRT
-// Last edited on January 17 of 2019, at 11:19 BRT
+// Last edited on January 18 of 2019, at 17:03 BRT
 
 #include <chicago/arch/ide.h>
 #include <chicago/arch/idt.h>
@@ -297,7 +297,7 @@ Boolean IDEWriteSectors(UInt8 bus, UInt8 drive, UInt8 count, UInt32 lba, PUInt8 
 		}
 	}
 	
-return ret;
+	return ret;
 }
 
 UIntPtr IDEGetBlockSize(UInt8 bus, UInt8 drive) {
@@ -316,6 +316,64 @@ UIntPtr IDEGetBlockSize(UInt8 bus, UInt8 drive) {
 	} else {
 		return 512;
 	}
+}
+
+UInt8 IDEGetDeviceStatus(UInt32 bus, UInt32 drive) {
+	if (bus > 1 || drive > 1) {																					// Valid?
+		return 0;																								// No....
+	}
+	
+	IDEDevice dev = IDEDevices[(bus * 2) + drive];																// Let's get our int device
+	
+	if (!dev.valid) {																							// Valid device?
+		return 0;																								// No
+	} else if (!dev.atapi) {																					// ATAPI?
+		return 1;																								// No, so it is present
+	}
+	
+	UInt16 io = dev.io;
+	UInt8 slave = dev.slave;
+	UInt8 packet[12] = { 0 };
+	
+	PortOutByte(io + ATA_REG_CONTROL, IDEIRQInvoked = 0);														// This time, enable the IRQs
+	
+	packet[0] = ATAPI_CMD_TEST_UNIT_READY;																		// Setup SCSI packet
+	packet[1] = 0x00;
+	packet[2] = 0x00;
+	packet[3] = 0x00;
+	packet[4] = 0x00;
+	packet[5] = 0x00;
+	packet[6] = 0x00;
+	packet[7] = 0x00;
+	packet[8] = 0x00;
+	packet[9] = 0x00;
+	packet[10] = 0x00;
+	packet[11] = 0x00;
+	
+	PortOutByte(io + ATA_REG_HDDEVSEL, slave << 4);																// Select the drive
+	
+	for (UInt32 i = 0; i < 4; i++) {																			// 400 nanoseconds delay
+		PortInByte(io + ATA_REG_ALTSTATUS);
+	}
+	
+	PortOutByte(io + ATA_REG_FEATURES, 0);																		// We're going to use PIO mode
+	PortOutByte(io + ATA_REG_LBA1, 0x01);																		// Tell the size of the buffer
+	PortOutByte(io + ATA_REG_LBA2, 0x01);
+	PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_PACKET);															// Send the PACKET command
+	
+	if (!IDEPolling(io, True)) {																				// Poll and return error if error
+		return 0;
+	}
+	
+	PortOutMultiple(io + ATA_REG_DATA, packet, 6);																// Send the packet
+	
+	IDEWaitIRQ();																								// Wait for an IRQ
+	
+	UInt8 status = PortInByte(io + ATA_REG_ERROR);																// Read the data
+	
+	while (PortInByte(io + ATA_REG_STATUS) & (ATA_SR_BSY | ATA_SR_DRQ)) ;										// Wait for BSY and DRQ to clear
+	
+	return status == 0;																							// Return the status
 }
 
 Void IDEInitializeInt(UInt32 bus, UInt32 drive) {
@@ -513,10 +571,13 @@ Boolean IDEDeviceControl(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf) {
 	
 	UInt8 bus = (((UInt32)dev->priv) >> 8) & 0xFF;
 	UInt8 drive = ((UInt32)dev->priv) & 0xFF;
-	PUIntPtr out = (PUIntPtr)obuf;
+	PUIntPtr out32 = (PUIntPtr)obuf;
+	PUInt8 out8 = (PUInt8)obuf;
 	
 	if (cmd == 0) {																								// Get block size?
-		*out = IDEGetBlockSize(bus, drive);
+		*out32 = IDEGetBlockSize(bus, drive);
+	} else if (cmd == 1) {																						// Get device status?
+		*out8 = IDEGetDeviceStatus(bus, drive);
 	} else {
 		return False;																							// ...
 	}

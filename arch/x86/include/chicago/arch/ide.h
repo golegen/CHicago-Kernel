@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 23:39 BRT
-// Last edited on January 17 of 2019, at 11:19 BRT
+// Last edited on January 18 of 2019, at 16:17 BRT
 
 #ifndef __CHICAGO_ARCH_IDE__
 #define __CHICAGO_ARCH_IDE__
@@ -40,6 +40,8 @@
 #define ATA_CMD_IDENTIFY_PACKET 0xA1
 #define ATA_CMD_IDENTIFY 0xEC
 
+#define ATAPI_CMD_TEST_UNIT_READY 0x00
+#define ATAPI_CMD_IDENTIFY 0xA1
 #define ATAPI_CMD_READ 0xA8
 #define ATAPI_CMD_EJECT 0x1B
 
@@ -73,8 +75,7 @@
 #define ATA_IDENT_COMMANDSETS 164
 #define ATA_IDENT_MAX_LBA_EXT 200
 
-typedef struct IDEDeviceStruct
-{
+typedef struct IDEDeviceStruct {
 	Boolean valid;
 	UInt16 io;
 	UInt8 slave;

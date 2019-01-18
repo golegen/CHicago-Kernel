@@ -1,7 +1,7 @@
 # File author is Ítalo Lima Marconato Matias
 #
 # Created on May 11 of 2018, at 13:14 BRT
-# Last edited on January 17 of 2019, at 12:25 BRT
+# Last edited on January 17 of 2019, at 21:13 BRT
 
 ARCH ?= x86
 VERBOSE ?= false
@@ -24,7 +24,8 @@ ifeq ($(ARCH),x86)
 	
 	ARCH_OBJECTS := start.s.o
 	ARCH_OBJECTS += arch.c.o
-	ARCH_OBJECTS += io/debug.c.o io/ide.c.o io/keyboard.c.o io/mouse.c.o
+	ARCH_OBJECTS += io/ahci.c.o io/debug.c.o io/ide.c.o io/keyboard.c.o
+	ARCH_OBJECTS += io/mouse.c.o
 	ARCH_OBJECTS += net/e1000.c.o
 	ARCH_OBJECTS += sys/gdt.c.o sys/idt.c.o sys/panic.c.o sys/pci.c.o
 	ARCH_OBJECTS += sys/pit.c.o sys/process.c.o sys/sc.c.o
