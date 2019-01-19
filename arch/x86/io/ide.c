@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 23:40 BRT
-// Last edited on January 18 of 2019, at 17:03 BRT
+// Last edited on January 18 of 2019, at 18:14 BRT
 
 #include <chicago/arch/ide.h>
 #include <chicago/arch/idt.h>
@@ -17,9 +17,6 @@ IDEDevice IDEDevices[4];
 UInt8 IDEBuffer[512] = { 0 };
 Volatile Boolean IDEIRQInvoked = False;
 
-PWChar IDEHardDiskString = L"HardDiskX";
-PWChar IDECDROMString = L"CdRomX";
-
 Void IDEHandler(PRegisters regs) {
 	(Void)regs;
 	IDEIRQInvoked = True;
@@ -28,14 +25,6 @@ Void IDEHandler(PRegisters regs) {
 Void IDEWaitIRQ(Void) {
 	while (!IDEIRQInvoked) ;
 	IDEIRQInvoked = False;
-}
-
-PWChar IDEGetHardDiskString(Void) {
-	return IDEHardDiskString;
-}
-
-PWChar IDEGetCDROMString(Void) {
-	return IDECDROMString;
 }
 
 Boolean IDEPolling(UInt16 io, Boolean adv) {
@@ -608,38 +597,20 @@ Void IDEInit(Void) {
 		}
 	}
 	
-	for (UInt32 i = 0, hdc = 0, cdc = 0; i < 2; i++) {															// And let's add them (the valid ones) to the device list!
+	for (UInt32 i = 0; i < 2; i++) {																			// And let's add them (the valid ones) to the device list!
 		for (UInt32 j = 0; j < 2; j++) {
 			if (IDEDevices[(i * 2) + j].valid) {																// Valid?
-				PWChar name = Null;																				// Yes, let's allocate memory for the name
-				PVoid devbd = (PVoid)((i << 8) | j);
+				PVoid devbd = (PVoid)((i << 8) | j);															// Yes!
 				
 				if (IDEDevices[(i * 2) + j].atapi) {															// ATAPI?
-					name = StrDuplicate(IDECDROMString);														// Yes, so duplicate the CdRomX string
-					
-					if (name == Null) {																			// Failed?
-						DbgWriteFormated("[x86] Failed to add CdRom%d device\r\n", cdc++);						// Yes...
-						goto next;
+					if (!FsAddCdRom(devbd, IDEDeviceRead, IDEDeviceWrite, IDEDeviceControl)) {					// Yes, try to add it
+						DbgWriteFormated("[x86] Failed to add a IDE cdrom\r\n");
 					}
-					
-					name[5] = (WChar)(cdc++ + '0');																// And set the num
 				} else {
-					name = StrDuplicate(IDEHardDiskString);														// No, so duplicate the HardDiskX string
-					
-					if (name == Null) {																			// Failed?
-						DbgWriteFormated("[x86] Failed to add HardDisk%d device\r\n", hdc++);					// Yes...
-						goto next;
+					if (!FsAddHardDisk(devbd, IDEDeviceRead, IDEDeviceWrite, IDEDeviceControl)) {				// It's a hard disk, try to add it
+						DbgWriteFormated("[x86] Failed to add a IDE hard disk\r\n");
 					}
-					
-					name[8] = (WChar)(hdc++ + '0');																// And set the num
 				}
-				
-				if (!FsAddDevice(name, devbd, IDEDeviceRead, IDEDeviceWrite, IDEDeviceControl)) {				// At end try to add us to the device list!
-					DbgWriteFormated("[x86] Failed to add %s device\r\n", name);
-					MemFree((UIntPtr)name);
-				}
-				
-next:			;
 			}
 		}
 	}

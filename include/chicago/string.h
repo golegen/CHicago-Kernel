@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 15 of 2018, at 20:03 BRT
-// Last edited on January 17 of 2019, at 12:19 BRT
+// Last edited on January 19 of 2019, at 18:00 BRT
 
 #ifndef __CHICAGO_STRING_H__
 #define __CHICAGO_STRING_H__
@@ -27,6 +27,7 @@ PWChar StrTokenize(PWChar str, PWChar delim);
 PChar StrTokenizeC(PChar str, PChar delim);
 PWChar StrDuplicate(PWChar str);
 PChar StrDuplicateC(PChar str);
+UIntPtr StrFormat(PWChar str, PWChar data, ...);
 Void StrUnicodeFromC(PWChar dest, PChar src, UIntPtr len);
 
 #endif		// __CHICAGO_STRING_H__

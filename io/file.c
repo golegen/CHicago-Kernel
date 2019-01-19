@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 16 of 2018, at 18:28 BRT
-// Last edited on December 22 of 2018, at 16:31 BRT
+// Last edited on January 18 of 2019, at 18:24 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -675,30 +675,6 @@ Boolean FsRemoveType(PWChar name) {
 	MemFree((UIntPtr)type);
 	
 	return True;																														// And return True!
-}
-
-Void FsDbgListMountPoints(Void) {
-	if (FsMountPointList == Null) {
-		DbgWriteFormated("[FsDbgListMountPoints] Mount point list isn't initialized!\r\n");
-	} else if (FsMountPointList->length == 0) {
-		DbgWriteFormated("[FsDbgListMountPoints] No mount points avaliable.\r\n");
-	} else {
-		ListForeach(FsMountPointList, i) {
-			DbgWriteFormated("[FsDbgListMountPoints] %s (%s)\r\n", ((PFsMountPoint)(i->data))->path, ((PFsMountPoint)(i->data))->type);
-		}
-	}
-}
-
-Void FsDbgListTypes(Void) {
-	if (FsTypeList == Null) {
-		DbgWriteFormated("[FsDbgListTypes] Filesystem type list isn't initialized!\r\n");
-	} else if (FsTypeList->length == 0) {
-		DbgWriteFormated("[FsDbgListTypes] No filesystem types avaliable.\r\n");
-	} else {
-		ListForeach(FsTypeList, i) {
-			DbgWriteFormated("[FsDbgListTypes] %s\r\n", ((PFsType)(i->data))->name);
-		}
-	}
 }
 
 Void FsInitTypes(Void) {

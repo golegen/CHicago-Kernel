@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 16 of 2018, at 18:18 BRT
-// Last edited on December 15 of 2018, at 09:12 BRT
+// Last edited on January 18 of 2019, at 18:24 BRT
 
 #ifndef __CHICAGO_FILE_H__
 #define __CHICAGO_FILE_H__
@@ -65,8 +65,6 @@ Boolean FsAddMountPoint(PWChar path, PWChar type, PFsNode root);
 Boolean FsRemoveMountPoint(PWChar path);
 Boolean FsAddType(PWChar name, Boolean (*probe)(PFsNode), PFsMountPoint (*mount)(PFsNode, PWChar), Boolean (*umount)(PFsMountPoint));
 Boolean FsRemoveType(PWChar name);
-Void FsDbgListMountPoints(Void);
-Void FsDbgListTypes(Void);
 Void FsInit(Void);
 
 #endif		// __CHICAGO_FILE_H__

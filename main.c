@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on December 16 of 2018, at 18:49 BRT
+// Last edited on January 18 of 2019, at 18:04 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -60,6 +60,8 @@ Void KernelMain(Void) {
 	PsInit();																												// Init tasking
 	ArchHalt();																												// Halt
 }
+
+#include <chicago/string.h>
 
 Void KernelMainLate(Void) {
 	DispIncrementProgessBar();

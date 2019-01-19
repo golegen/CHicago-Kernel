@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on January 17 of 2019, at 21:06 BRT
-// Last edited on January 18 of 2019, at 15:34 BRT
+// Last edited on January 18 of 2019, at 18:19 BRT
 
 #include <chicago/arch/ahci.h>
 #include <chicago/arch/ide.h>
@@ -14,10 +14,6 @@
 #include <chicago/mm.h>
 #include <chicago/panic.h>
 #include <chicago/string.h>
-
-static UInt8 AHCICount = 0;
-static PWChar AHCIHardDiskString = L"SataXHardDiskX";
-static PWChar AHCICDROMString = L"SataXCdRomX";
 
 static UInt8 AHCIGetType(PHBAPort port) {
 	if ((port->ssts & 0x0F) != 0x03) {																					// Present?
@@ -95,8 +91,6 @@ Void AHCIInit(UInt16 bus, UInt8 slot, UInt8 func) {
 	
 	UInt32 port = abar->pi;																								// Let's search for the amount of SATA/SATAPI devices
 	UInt32 pcnt = 0;
-	UInt8 hdc = 0;
-	UInt8 cdc = 0;
 	
 	for (UInt32 i = 0; i < 32; i++) {
 		if ((port & 1) && (AHCIGetType(&abar->ports[i]) != 0)) {														// Valid?
@@ -139,51 +133,27 @@ Void AHCIInit(UInt16 bus, UInt8 slot, UInt8 func) {
 			PAHCIDevice dev = (PAHCIDevice)MemAllocate(sizeof(AHCIDevice));												// Alloc memory for this device
 			
 			if ((dev == Null) && (type == 1)) {
-				DbgWriteFormated("[x86] Failed to add Sata%dCdRom%d device\r\n", AHCICount, cdc++);						// Failed (CdRom)
+				DbgWriteFormated("[x86] Failed to add a SATA cdrom\r\n");												// Failed (CdRom)
 				goto nope;
 			} else if (dev == Null) {
-				DbgWriteFormated("[x86] Failed to add Sata%dHardDisk%d device\r\n", AHCICount, hdc++);					// Failed (HardDisk)
+				DbgWriteFormated("[x86] Failed to add a SATA hard disk\r\n");											// Failed (HardDisk)
 				goto nope;
 			}
 			
 			dev->port = &abar->ports[i];																				// Set the port of this device
 			dev->atapi = type == 1;																						// Set if this device is ATAPI
 			
-			PWChar name = Null;																							// Let's allocate memory for the name
-			
-			if (type == 1) {																							// SATAPI?
-				name = StrDuplicate(AHCICDROMString);																	// Yes, so duplicate the SataXCdRomX string
-				
-				if (name == Null) {																						// Failed?
-					DbgWriteFormated("[x86] Failed to add Sata%dCdRom%d device\r\n", AHCICount, cdc++);					// Yes...
-					MemFree((UIntPtr)dev);
-					goto nope;
+			if (dev->atapi) {																							// ATAPI?
+				if (!FsAddCdRom(dev, AHCIDeviceRead, AHCIDeviceWrite, AHCIDeviceControl)) {								// Yes, try to add it
+					DbgWriteFormated("[x86] Failed to add a SATA cdrom\r\n");
 				}
-				
-				name[10] = (WChar)(cdc++ + '0');																		// And set the num
 			} else {
-				name = StrDuplicate(AHCIHardDiskString);																// No, so duplicate the SataXHardDiskX string
-				
-				if (name == Null) {																						// Failed?
-					DbgWriteFormated("[x86] Failed to add Sata%dCdRom%d device\r\n", AHCICount, hdc++);					// Yes...
-					MemFree((UIntPtr)dev);
-					goto nope;
+				if (!FsAddHardDisk(dev, AHCIDeviceRead, AHCIDeviceWrite, AHCIDeviceControl)) {							// It's a hard disk, try to add it
+					DbgWriteFormated("[x86] Failed to add a SATA hard disk\r\n");
 				}
-				
-				name[13] = (WChar)(hdc++ + '0');																		// And set the num
-			}
-			
-			name[4] = (WChar)(AHCICount + '0');																			// And set the SATA controller "special" number
-			
-			if (!FsAddDevice(name, dev, AHCIDeviceRead, AHCIDeviceWrite, AHCIDeviceControl)) {							// At end try to add us to the device list!
-				DbgWriteFormated("[x86] Failed to add %s device\r\n", name);
-				MemFree((UIntPtr)name);
-				MemFree((UIntPtr)dev);
 			}
 		}
 		
 nope:;	port >>= 1;																										// Go to the next port
 	}
-	
-	AHCICount++;
 }

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 22:35 BRT
-// Last edited on December 09 of 2018, at 18:15 BRT
+// Last edited on January 18 of 2019, at 18:23 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -57,6 +57,52 @@ Boolean FsAddDevice(PWChar name, PVoid priv, Boolean (*read)(PDevice, UIntPtr, U
 	if (!ListAdd(FsDeviceList, dev)) {											// Try to add to the list
 		MemFree((UIntPtr)dev);													// Failed, so let's free the dev struct
 		return False;															// And return False
+	}
+	
+	return True;
+}
+
+Boolean FsAddHardDisk(PVoid priv, Boolean (*read)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*write)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*control)(PDevice, UIntPtr, PUInt8, PUInt8)) {
+	if (FsDeviceList == Null) {													// Device list was initialized?
+		return False;															// No...
+	}
+	
+	static UIntPtr count = 0;
+	UIntPtr nlen = StrFormat(Null, L"HardDisk%d", count++);						// Get the length of the name
+	PWChar name = (PWChar)MemAllocate(nlen);									// Alloc space for the name
+	
+	if (name == Null) {
+		return False;															// Failed
+	}
+	
+	StrFormat(name, L"HardDisk%d", count - 1);									// Format the name string!
+	
+	if (!FsAddDevice(name, priv, read, write, control)) {						// Try to add it!
+		MemFree((UIntPtr)name);													// Failed, free the name and return
+		return False;
+	}
+	
+	return True;
+}
+
+Boolean FsAddCdRom(PVoid priv, Boolean (*read)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*write)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*control)(PDevice, UIntPtr, PUInt8, PUInt8)) {
+	if (FsDeviceList == Null) {													// Device list was initialized?
+		return False;															// No...
+	}
+	
+	static UIntPtr count = 0;
+	UIntPtr nlen = StrFormat(Null, L"CdRom%d", count++);						// Get the length of the name
+	PWChar name = (PWChar)MemAllocate(nlen);									// Alloc space for the name
+	
+	if (name == Null) {
+		return False;															// Failed
+	}
+	
+	StrFormat(name, L"CdRom%d", count - 1);										// Format the name string!
+	
+	if (!FsAddDevice(name, priv, read, write, control)) {						// Try to add it!
+		MemFree((UIntPtr)name);													// Failed, free the name and return
+		return False;
 	}
 	
 	return True;
@@ -158,18 +204,6 @@ Void FsSetBootDevice(PWChar name) {
 
 PWChar FsGetBootDevice(Void) {
 	return FsBootDevice;
-}
-
-Void FsDbgListDevices(Void) {
-	if (FsDeviceList == Null) {
-		DbgWriteFormated("[FsDbgListDevices] Device list isn't initialized!\r\n");
-	} else if (FsDeviceList->length == 0) {
-		DbgWriteFormated("[FsDbgListDevices] No devices avaliable.\r\n");
-	} else {
-		ListForeach(FsDeviceList, i) {
-			DbgWriteFormated("[FsDbgListDevices] %s\r\n", ((PDevice)(i->data))->name);
-		}
-	}
 }
 
 Void FsInitDeviceList(Void) {

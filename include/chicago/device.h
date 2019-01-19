@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 22:38 BRT
-// Last edited on December 09 of 2018, at 17:24 BRT
+// Last edited on January 18 of 2019, at 18:24 BRT
 
 #ifndef __CHICAGO_DEVICE_H__
 #define __CHICAGO_DEVICE_H__
@@ -39,13 +39,14 @@ Boolean FsReadDevice(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf);
 Boolean FsWriteDevice(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf);
 Boolean FsControlDevice(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf);
 Boolean FsAddDevice(PWChar name, PVoid priv, Boolean (*read)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*write)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*control)(PDevice, UIntPtr, PUInt8, PUInt8));
+Boolean FsAddHardDisk(PVoid priv, Boolean (*read)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*write)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*control)(PDevice, UIntPtr, PUInt8, PUInt8));
+Boolean FsAddCdRom(PVoid priv, Boolean (*read)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*write)(PDevice, UIntPtr, UIntPtr, PUInt8), Boolean (*control)(PDevice, UIntPtr, PUInt8, PUInt8));
 Boolean FsRemoveDevice(PWChar name);
 PDevice FsGetDevice(PWChar name);
 PDevice FsGetDeviceByID(UIntPtr id);
 UIntPtr FsGetDeviceID(PWChar name);
 Void FsSetBootDevice(PWChar name);
 PWChar FsGetBootDevice(Void);
-Void FsDbgListDevices(Void);
 Void FsInitDeviceList(Void);
 Void FsInitDevices(Void);
 
