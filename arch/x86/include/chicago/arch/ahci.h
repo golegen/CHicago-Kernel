@@ -1,12 +1,14 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on January 17 of 2019, at 21:07 BRT
-// Last edited on January 18 of 2019, at 15:33 BRT
+// Last edited on January 19 of 2019, at 00:56 BRT
 
 #ifndef __CHICAGO_ARCH_AHCI_H__
 #define __CHICAGO_ARCH_AHCI_H__
 
 #include <chicago/types.h>
+
+#define FIS_TYPE_REG_H2D 0x27
 
 typedef volatile struct {
 	UInt32 clb;
@@ -50,7 +52,7 @@ typedef volatile struct {
 typedef struct {
 	UInt8 cfl : 5;
 	UInt8 atapi : 1;
-	UInt8 h2d : 1;
+	UInt8 w : 1;
 	UInt8 prefetch : 1;
 	UInt8 reset : 1;
 	UInt8 bist : 1;
@@ -81,8 +83,31 @@ typedef struct {
 } HBACmdTbl, *PHBACmdTbl;
 
 typedef struct {
+	UInt8 type;
+	UInt8 pmport : 4;
+	UInt8 res0 : 3;
+	UInt8 c : 1;
+	UInt8 cmd;
+	UInt8 featl;
+	UInt8 lba0;
+	UInt8 lba1;
+	UInt8 lba2;
+	UInt8 dev;
+	UInt8 lba3;
+	UInt8 lba4;
+	UInt8 lba5;
+	UInt8 festh;
+	UInt8 cntl;
+	UInt8 cnth;
+	UInt8 icc;
+	UInt8 ctrl;
+	UInt8 res1[4];
+} FISRegH2D, *PFISRegH2D;
+
+typedef struct {
 	PHBAPort port;
 	Boolean atapi;
+	UIntPtr virt;
 } AHCIDevice, *PAHCIDevice;
 
 Void AHCIInit(UInt16 bus, UInt8 slot, UInt8 func);
