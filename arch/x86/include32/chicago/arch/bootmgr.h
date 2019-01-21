@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 27 of 2018, at 13:38 BRT
-// Last edited on October 26 of 2018, at 22:54 BRT
+// Last edited on January 21 of 2019, at 16:32 BRT
 
 #ifndef __CHICAGO_ARCH_BOOTMGR_H__
 #define __CHICAGO_ARCH_BOOTMGR_H__
@@ -9,9 +9,9 @@
 #include <chicago/types.h>
 
 typedef struct {
-	UInt32 base_low;
+	UInt32 base;
 	UInt32 base_high;
-	UInt32 length_low;
+	UInt32 length;
 	UInt32 length_high;
 	UInt32 type;
 	UInt32 acpi;

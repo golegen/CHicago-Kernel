@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 31 of 2018, at 18:45 BRT
-// Last edited on December 14 of 2018, at 13:15 BRT
+// Last edited on January 21 of 2019, at 16:36 BRT
 
 #define __CHICAGO_PMM__
 
@@ -29,17 +29,17 @@ UIntPtr MmBootAlloc(UIntPtr size, Boolean align) {
 
 UIntPtr PMMCountMemory(Void) {
 	PBootmgrMemoryMap mmap = BootmgrMemMap;																				// Here we're going to use the memory map for getting the memory size
-	UInt32 mmapi = 0;
-	UInt32 memsize = 0;
+	UIntPtr mmapi = 0;
+	UIntPtr memsize = 0;
 	
 	while (mmapi < BootmgrMemMapCount) {
 		if (mmap->type > 4) {																							// Valid?
 			mmap->type = 2;																								// Nope, so let's set as reserved
-		} else if ((mmapi > 0) && (mmap->base_low == 0)) {																// End (before expected)?
+		} else if ((mmapi > 0) && (mmap->base == 0)) {																	// End (before expected)?
 			break;
 		} else {
 			if (mmap->type == 1) {																						// Add to memsize?
-				memsize += mmap->length_low;																			// Yes
+				memsize += mmap->length;																				// Yes
 			}
 		}
 		
@@ -72,12 +72,12 @@ Void PMMInit(Void) {
 	while (mmapi < BootmgrMemMapCount) {
 		if (mmap->type > 4) {																							// Valid?
 			mmap->type = 2;																								// Nope, so let's set as reserved
-		} else if ((mmapi > 0) && (mmap->base_low == 0)) {																// End (before expected)?
+		} else if ((mmapi > 0) && (mmap->base == 0)) {																	// End (before expected)?
 			break;
 		} else {
 			if (mmap->type == 1) {																						// Avaliable for use?
-				for (UIntPtr i = 0; i < mmap->length_low; i += MM_PAGE_SIZE) {											// YES!
-					UIntPtr addr = mmap->base_low + i;
+				for (UIntPtr i = 0; i < mmap->length; i += MM_PAGE_SIZE) {												// YES!
+					UIntPtr addr = mmap->base + i;
 					
 					if ((addr != 0) && (!((addr >= kstart) && (addr < kend)))) {										// Just check if the addr isn't 0 nor it's the kernel physical address
 						MmFreePage(addr);																				// Everything is ok, SO FREE IT!

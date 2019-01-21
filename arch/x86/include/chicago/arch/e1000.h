@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 19:41 BRT
-// Last edited on December 15 of 2018, at 21:38 BRT
+// Last edited on January 21 of 2019, at 16:44 BRT
 
 #ifndef __CHICAGO_ARCH_E1000_H__
 #define __CHICAGO_ARCH_E1000_H__
@@ -36,7 +36,7 @@ typedef struct {
 	Boolean eeprom;
 	Boolean use_io;
 	UInt16 io_base;
-	UInt32 mem_base;
+	UIntPtr mem_base;
 	PNetworkDevice ndev;
 	UInt8 mac_address[6];
 	PE1000RXDesc rx_descs;

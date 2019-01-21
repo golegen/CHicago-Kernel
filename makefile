@@ -1,7 +1,7 @@
 # File author is Ítalo Lima Marconato Matias
 #
 # Created on May 11 of 2018, at 13:14 BRT
-# Last edited on January 17 of 2019, at 21:13 BRT
+# Last edited on January 21 of 2019, at 16:31 BRT
 
 ARCH ?= x86
 VERBOSE ?= false
@@ -11,30 +11,31 @@ PATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../toolchain/$
 SHELL := env PATH=$(PATH) /bin/bash
 
 ifeq ($(ARCH),x86)
-	TARGET ?= i686-elf
-	SUBARCH ?= pc
+	SUBARCH ?= 32
 	
-	ARCH_CFLAGS := -DCHEXEC_ARCH=CHEXEC_HEADER_FLAGS_ARCH_X86 -msse2
-	
-	ifneq ($(SUBARCH),pc)
-	ifneq ($(SUBARCH),efi)
+	ifeq ($(SUBARCH),32)
+		TARGET ?= i686-elf
+		ARCH_CFLAGS := -DCHEXEC_ARCH=CHEXEC_HEADER_FLAGS_ARCH_X86 -msse2 -Iarch/$(ARCH)/include32
+		OBJCOPY_FORMAT := elf32-i386
+	else ifeq ($(SUBARCH),64)
+		TARGET ?= x86_64-elf
+		ARCH_CFLAGS := -DCHEXEC_ARCH=CHEXEC_HEADER_FLAGS_ARCH_X86 -DARCH_64 -mcmodel=large -mno-red-zone -mno-mmx -Iarch/$(ARCH)/include64
+		OBJCOPY_FORMAT := elf64-x86-64
+	else
 		UNSUPPORTED_ARCH := true
 	endif
-	endif
 	
-	ARCH_OBJECTS := start.s.o
+	ARCH_OBJECTS := start$(SUBARCH).s.o
 	ARCH_OBJECTS += arch.c.o
 	ARCH_OBJECTS += io/ahci.c.o io/debug.c.o io/ide.c.o io/keyboard.c.o
 	ARCH_OBJECTS += io/mouse.c.o
 	ARCH_OBJECTS += net/e1000.c.o
-	ARCH_OBJECTS += sys/gdt.c.o sys/idt.c.o sys/panic.c.o sys/pci.c.o
-	ARCH_OBJECTS += sys/pit.c.o sys/process.c.o sys/sc.c.o
-	ARCH_OBJECTS += mm/pmm.c.o mm/vmm.c.o
+	ARCH_OBJECTS += sys/gdt$(SUBARCH).c.o sys/idt$(SUBARCH).c.o sys/panic$(SUBARCH).c.o sys/pci.c.o
+	ARCH_OBJECTS += sys/pit.c.o sys/process$(SUBARCH).c.o sys/sc$(SUBARCH).c.o
+	ARCH_OBJECTS += mm/pmm.c.o mm/vmm$(SUBARCH).c.o
 	
-	OBJCOPY_FORMAT := elf32-i386
 	OBJCOPY_ARCH := i386
-	
-	LINKER_SCRIPT := link.ld
+	LINKER_SCRIPT := link$(SUBARCH).ld
 else
 	UNSUPPORTED_ARCH := true
 endif
@@ -125,12 +126,12 @@ ifeq ($(SUBARCH),)
 ifeq ($(DEBUG),yes)
 	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -DDEBUG -g -std=c11 -Iinclude -Iarch/$(ARCH)/include -ffreestanding -O0 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
 else
-	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -std=c11 -Iinclude -Iarch/$(ARCH)/include -ffreestanding -ffast-math -funroll-loops -fomit-frame-pointer -O3 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
+	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -std=c11 -Iinclude -Iarch/$(ARCH)/include -ffreestanding -funroll-loops -fomit-frame-pointer -O3 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
 endif
 else
 ifeq ($(DEBUG),yes)
 	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -DDEBUG -g -std=c11 -Iinclude -Iarch/$(ARCH)/include -I arch/$(ARCH)/subarch/$(SUBARCH)/include -ffreestanding -O0 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
 else
-	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -std=c11 -Iinclude -Iarch/$(ARCH)/include -I arch/$(ARCH)/subarch/$(SUBARCH)/include -ffreestanding -ffast-math -funroll-loops -fomit-frame-pointer -O3 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
+	$(NOECHO)$(TARGET)-gcc -DARCH=L\"$(ARCH)\" -DARCH_C=\"$(ARCH)\" -std=c11 -Iinclude -Iarch/$(ARCH)/include -I arch/$(ARCH)/subarch/$(SUBARCH)/include -ffreestanding -funroll-loops -fomit-frame-pointer -O3 -Wall -Wextra -Wno-implicit-fallthrough -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast $(ARCH_CFLAGS) -c $< -o $@
 endif
 endif
