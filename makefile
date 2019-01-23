@@ -1,7 +1,7 @@
 # File author is Ítalo Lima Marconato Matias
 #
 # Created on May 11 of 2018, at 13:14 BRT
-# Last edited on January 21 of 2019, at 23:25 BRT
+# Last edited on January 23 of 2019, at 14:46 BRT
 
 ARCH ?= x86
 VERBOSE ?= false
@@ -11,31 +11,22 @@ PATH := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/../toolchain/$
 SHELL := env PATH=$(PATH) /bin/bash
 
 ifeq ($(ARCH),x86)
-	SUBARCH ?= 32
+	TARGET ?= i686-elf
+	ARCH_CFLAGS := -DCHEXEC_ARCH=CHEXEC_HEADER_FLAGS_ARCH_X86 -msse2
 	
-	ifeq ($(SUBARCH),32)
-		TARGET ?= i686-elf
-		ARCH_CFLAGS := -DCHEXEC_ARCH=CHEXEC_HEADER_FLAGS_ARCH_X86 -msse2 -Iarch/$(ARCH)/include32
-		OBJCOPY_FORMAT := elf32-i386
-	else ifeq ($(SUBARCH),64)
-		TARGET ?= x86_64-elf
-		ARCH_CFLAGS := -DCHEXEC_ARCH=CHEXEC_HEADER_FLAGS_ARCH_X86 -DARCH_64 -mcmodel=large -mno-red-zone -mno-mmx -Iarch/$(ARCH)/include64
-		OBJCOPY_FORMAT := elf64-x86-64
-	else
-		UNSUPPORTED_ARCH := true
-	endif
-	
-	ARCH_OBJECTS := start$(SUBARCH).s.o
+	ARCH_OBJECTS := start.s.o
 	ARCH_OBJECTS += arch.c.o
 	ARCH_OBJECTS += io/ahci.c.o io/debug.c.o io/ide.c.o io/keyboard.c.o
 	ARCH_OBJECTS += io/mouse.c.o
 	ARCH_OBJECTS += net/e1000.c.o
-	ARCH_OBJECTS += sys/gdt$(SUBARCH).c.o sys/idt$(SUBARCH).c.o sys/panic$(SUBARCH).c.o sys/pci.c.o
-	ARCH_OBJECTS += sys/pit.c.o sys/process$(SUBARCH).c.o sys/sc$(SUBARCH).c.o
-	ARCH_OBJECTS += mm/pmm.c.o mm/vmm$(SUBARCH).c.o
+	ARCH_OBJECTS += sys/gdt.c.o sys/idt.c.o sys/panic.c.o sys/pci.c.o
+	ARCH_OBJECTS += sys/pit.c.o sys/process.c.o sys/sc.c.o
+	ARCH_OBJECTS += mm/pmm.c.o mm/vmm.c.o
 	
 	OBJCOPY_ARCH := i386
-	LINKER_SCRIPT := link$(SUBARCH).ld
+	OBJCOPY_FORMAT := elf32-i386
+	
+	LINKER_SCRIPT := link.ld
 else
 	UNSUPPORTED_ARCH := true
 endif
