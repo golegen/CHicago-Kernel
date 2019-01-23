@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:27 BRT
-// Last edited on December 16 of 2018, at 18:48 BRT
+// Last edited on January 21 of 2019, at 23:04 BRT
 
 #include <chicago/types.h>
 
@@ -15,6 +15,8 @@ PWChar NlsMessagesBr[] = {
 	L"Codinome '%s'\r\n",
 	
 	L"Versão %d.%d.%d\r\n\r\n",
+	
+	L"Falha de segmentação\r\n",
 	
 	L"Uso: %s [caminho]\r\n\r\n",
 	

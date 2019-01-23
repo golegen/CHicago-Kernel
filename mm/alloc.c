@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 13 of 2018, at 00:44 BRT
-// Last edited on January 19 of 2019, at 11:54 BRT
+// Last edited on January 23 of 2019, at 11:18 BRT
 
 #include <chicago/alloc-int.h>
 #include <chicago/heap.h>
@@ -134,7 +134,7 @@ UIntPtr MemAAllocate(UIntPtr size, UIntPtr align) {
 	
 	UIntPtr p1 = 0;
 	PUIntPtr p2 = Null;
-	Int off = align - 1 + sizeof(UIntPtr);
+	IntPtr off = align - 1 + sizeof(UIntPtr);
 	UIntPtr possiblenew = HeapGetCurrent() + size + off + sizeof(AllocBlock);
 	
 	if ((p1 = MemAllocate(size + off + (possiblenew % MM_PAGE_SIZE))) == 0) {

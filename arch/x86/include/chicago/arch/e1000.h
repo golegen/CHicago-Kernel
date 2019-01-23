@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 19:41 BRT
-// Last edited on January 21 of 2019, at 16:44 BRT
+// Last edited on January 23 of 2019, at 13:29 BRT
 
 #ifndef __CHICAGO_ARCH_E1000_H__
 #define __CHICAGO_ARCH_E1000_H__
@@ -28,9 +28,6 @@ typedef struct {
 } Packed E1000TXDesc, *PE1000TXDesc;
 
 typedef struct {
-	UInt16 bus;
-	UInt8 slot;
-	UInt8 func;
 	UInt16 rx_cur;
 	UInt16 tx_cur;
 	Boolean eeprom;
@@ -47,6 +44,6 @@ typedef struct {
 	UIntPtr tx_descs_phys;
 } E1000Device, *PE1000Device;
 
-Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func);
+Void E1000Init(Void);
 
 #endif		// __CHICAGO_ARCH_E1000_H__

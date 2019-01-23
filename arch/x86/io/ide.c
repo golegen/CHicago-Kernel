@@ -1,10 +1,11 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 23:40 BRT
-// Last edited on January 18 of 2019, at 18:14 BRT
+// Last edited on January 23 of 2019, at 13:24 BRT
 
 #include <chicago/arch/ide.h>
 #include <chicago/arch/idt.h>
+#include <chicago/arch/pci.h>
 #include <chicago/arch/port.h>
 
 #include <chicago/alloc.h>
@@ -12,12 +13,11 @@
 #include <chicago/device.h>
 #include <chicago/string.h>
 
-IDEDevice IDEDevices[4];
+static UInt8 IDEBuffer[512] = { 0 };
+static Boolean IDEHandlerInit = False;
+static Volatile Boolean IDEIRQInvoked = False;
 
-UInt8 IDEBuffer[512] = { 0 };
-Volatile Boolean IDEIRQInvoked = False;
-
-Void IDEHandler(PRegisters regs) {
+static Void IDEHandler(PRegisters regs) {
 	(Void)regs;
 	IDEIRQInvoked = True;
 }
@@ -27,11 +27,21 @@ Void IDEWaitIRQ(Void) {
 	IDEIRQInvoked = False;
 }
 
-Boolean IDEPolling(UInt16 io, Boolean adv) {
-	while (PortInByte(io + ATA_REG_STATUS) & ATA_SR_BSY) ;														// Wait for BSY to be cleared
+static Void IDEReset(UInt16 base, UInt16 ctrl) {
+	PortOutByte(ctrl, 4);																						// Let's reset this drive
+	
+	for (UInt32 i = 0; i < 4; i++) {																			// 400 nanoseconds delay
+		PortInByte(base + ATA_REG_ALTSTATUS);
+	}
+	
+	PortOutByte(ctrl, 0);
+}
+
+static Boolean IDEPoll(UInt16 base, Boolean adv) {
+	while (PortInByte(base + ATA_REG_STATUS) & ATA_SR_BSY) ;													// Wait for BSY to be cleared
 	
 	if (adv) {																									// Advanced check?
-		UInt8 status = PortInByte(io + ATA_REG_STATUS);															// Yes, read the status register
+		UInt8 status = PortInByte(base + ATA_REG_STATUS);														// Yes, read the status register
 		
 		if (status & ATA_SR_ERR || status & ATA_SR_DF || (!(status & ATA_SR_DRQ))) {							// Check for error
 			return False;
@@ -41,409 +51,171 @@ Boolean IDEPolling(UInt16 io, Boolean adv) {
 	return True;
 }
 
-Void IDESelectDrive(UInt8 bus, UInt8 drive) {
-	if (bus == 0) {																								// Primary?
-		if (drive == 0) {																						// Yes! Master?
-			PortOutByte(0x1F0 + ATA_REG_HDDEVSEL, 0xA0);														// Yes!
-		} else {
-			PortOutByte(0x1F0 + ATA_REG_HDDEVSEL, 0xB0);														// No, so it's slave
-		}
-	} else {
-		if (drive == 0) {																						// Secundary... Master?
-			PortOutByte(0x170 + ATA_REG_HDDEVSEL, 0xA0);														// Yes!
-		} else {
-			PortOutByte(0x170 + ATA_REG_HDDEVSEL, 0xB0);														// No, so it's slave
-		}
-	}
-}
-
-Boolean IDEATAReadSector(UInt8 bus, UInt8 drive, UInt32 lba, PUInt8 buf) {
-	if (bus > 1 || drive > 1) {																					// Valid?
-		return False;																							// No....
-	}
+static Boolean IDESendSCSICommand(UInt16 base, Boolean slave, UInt8 cmd, UInt32 lba, UInt8 sects, UInt16 size, PUInt8 buf) {
+	UInt8 scmd[12] = { 0 };
 	
-	IDEDevice dev = IDEDevices[(bus * 2) + drive];																// Let's get our int device
+	PortOutByte(base + ATA_REG_CONTROL, IDEIRQInvoked = 0);														// Enable the IRQs
 	
-	if (!dev.valid) {																							// Valid device?
-		return False;																							// No
-	} else if (dev.atapi) {																						// ATAPI device?
-		return False;																							// Yes, in this function we only handle ATA
-	}
+	scmd[0] = cmd;																								// Setup the SCSI packet
+	scmd[2] = (lba >> 24) & 0xFF;
+	scmd[3] = (lba >> 16) & 0xFF;
+	scmd[4] = (lba >> 8) & 0xFF;
+	scmd[5] = lba & 0xFF;
+	scmd[9] = sects;
 	
-	UInt16 io = dev.io;
-	UInt8 slave = dev.slave;
-	
-	PortOutByte(io + ATA_REG_CONTROL, (IDEIRQInvoked = 0) + 2);													// Disable IRQs
-	
-	while (PortInByte(io + ATA_REG_STATUS) & ATA_SR_BSY) ;														// Poll until BSY is clear
-	
-	if (dev.addr48 && lba >= 0x10000000) {																		// We support, and need 48-bit addressing?
-		PortOutByte(io + ATA_REG_HDDEVSEL, 0xE0 | (slave << 4));												// Yes!
-	} else if (lba >= 0x10000000) {																				// We don't support, and need 48-bit addressing?
-		return False;																							// No...
-	} else {																									// So, it's normal addressing
-		PortOutByte(io + ATA_REG_HDDEVSEL, 0xE0 | (slave << 4) | ((lba & 0xF0000000) >> 24));
-	}
-	
-	if (lba >= 0x10000000) {																					// 48-bit addressing?
-		PortOutByte(io + ATA_REG_SECCOUNT1, 0);																	// Yes, so setup 48-bit addressing mode
-		PortOutByte(io + ATA_REG_LBA3, ((lba & 0xFF000000) >> 24));
-		PortOutByte(io + ATA_REG_LBA4, 0);
-		PortOutByte(io + ATA_REG_LBA5, 0);
-	}
-	
-	PortOutByte(io + ATA_REG_SECCOUNT0, 1);																		// 1 sector per time
-	PortOutByte(io + ATA_REG_LBA0, (lba & 0xFF));																// Let's send the LBA
-	PortOutByte(io + ATA_REG_LBA1, ((lba & 0xFF00) >> 8));
-	PortOutByte(io + ATA_REG_LBA2, ((lba & 0xFF0000) >> 16));
-	
-	if (lba >= 0x10000000) {																					// Send extended (48-bits addressing mode) command?
-		PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_READ_PIO_EXT);												// Yes
-	} else {
-		PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_READ_PIO);													// No
-	}
-	
-	if (!IDEPolling(io, True)) {																				// Poll, and return error if error
-		return False;
-	}
-	
-	PortInMultiple(io + ATA_REG_DATA, buf, 256);																// Read the data
-	
-	return True;
-}
-
-Boolean IDEATAWriteSector(UInt8 bus, UInt8 drive, UInt32 lba, PUInt8 buf) {
-	if (bus > 1 || drive > 1) {																					// Valid?
-		return False;																							// No....
-	}
-	
-	IDEDevice dev = IDEDevices[(bus * 2) + drive];																// Let's get our int device
-	
-	if (!dev.valid) {																							// Valid device?
-		return False;																							// No
-	} else if (dev.atapi) {																						// ATAPI device?
-		return False;																							// Yes, in this function we only handle ATA
-	}
-	
-	UInt16 io = dev.io;
-	UInt8 slave = dev.slave;
-	
-	PortOutByte(io + ATA_REG_CONTROL, (IDEIRQInvoked = 0) + 2);													// Disable IRQs
-	
-	while (PortInByte(io + ATA_REG_STATUS) & ATA_SR_BSY) ;														// Poll until BSY is clear
-	
-	if (dev.addr48 && lba >= 0x10000000) {																		// We support, and need 48-bit addressing?
-		PortOutByte(io + ATA_REG_HDDEVSEL, 0xE0 | (slave << 4));												// Yes!
-	} else if (lba >= 0x10000000) {																				// We don't support, and need 48-bit addressing?
-		return False;																							// No...
-	} else {																									// So, it's normal addressing
-		PortOutByte(io + ATA_REG_HDDEVSEL, 0xE0 | (slave << 4) | ((lba & 0xF0000000) >> 24));
-	}
-	
-	if (lba >= 0x10000000) {																					// 48-bit addressing?
-		PortOutByte(io + ATA_REG_SECCOUNT1, 0);																	// Yes, so setup 48-bit addressing mode
-		PortOutByte(io + ATA_REG_LBA3, ((lba & 0xFF000000) >> 24));
-		PortOutByte(io + ATA_REG_LBA4, 0);
-		PortOutByte(io + ATA_REG_LBA5, 0);
-	}
-	
-	PortOutByte(io + ATA_REG_SECCOUNT0, 1);																		// 1 sector per time
-	PortOutByte(io + ATA_REG_LBA0, (lba & 0xFF));																// Let's send the LBA
-	PortOutByte(io + ATA_REG_LBA1, ((lba & 0xFF00) >> 8));
-	PortOutByte(io + ATA_REG_LBA2, ((lba & 0xFF0000) >> 16));
-	
-	if (lba >= 0x10000000) {																					// Send extended (48-bits addressing mode) command?
-		PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO_EXT);												// Yes
-	} else {
-		PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);													// No
-	}
-	
-	if (!IDEPolling(io, True)) {																				// Poll, and return error if error
-		return False;
-	}
-	
-	PortOutMultiple(io + ATA_REG_DATA, buf, 256);																// Write the data
-	
-	if (lba >= 0x10000000) {																					// Send extended (48-bits addressing mode) FLUSH command?
-		PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH_EXT);												// Yes
-	} else {
-		PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);													// No
-	}
-	
-	IDEPolling(io, False);																						// Do some polling
-	
-	return True;
-}
-
-Boolean IDEATAPIReadSector(UInt8 bus, UInt8 drive, UInt32 lba, PUInt8 buf) {
-	if (bus > 1 || drive > 1) {																					// Valid?
-		return False;																							// No....
-	}
-	
-	IDEDevice dev = IDEDevices[(bus * 2) + drive];																// Let's get our int device
-	
-	if (!dev.valid) {																							// Valid device?
-		return False;																							// No
-	} else if (!dev.atapi) {																					// ATAPI device?
-		return False;																							// No, in this function we only handle ATAPI
-	}
-	
-	UInt16 io = dev.io;
-	UInt8 slave = dev.slave;
-	UInt8 packet[12] = { 0 };
-	
-	PortOutByte(io + ATA_REG_CONTROL, IDEIRQInvoked = 0);														// This time, enable the IRQs
-	
-	packet[0] = ATAPI_CMD_READ;																					// Setup SCSI packet
-	packet[1] = 0x00;
-	packet[2] = ((lba >> 24) & 0xFF);
-	packet[3] = ((lba >> 16) & 0xFF);
-	packet[4] = ((lba >> 8) & 0xFF);
-	packet[5] = (lba & 0xFF);
-	packet[6] = 0x00;
-	packet[7] = 0x00;
-	packet[8] = 0x00;
-	packet[9] = 0x01;
-	packet[10] = 0x00;
-	packet[11] = 0x00;
-	
-	PortOutByte(io + ATA_REG_HDDEVSEL, slave << 4);																// Select the drive
+	PortOutByte(base + ATA_REG_HDDEVSEL, slave << 4);															// Select the drive
 	
 	for (UInt32 i = 0; i < 4; i++) {																			// 400 nanoseconds delay
-		PortInByte(io + ATA_REG_ALTSTATUS);
+		PortInByte(base + ATA_REG_ALTSTATUS);
 	}
 	
-	PortOutByte(io + ATA_REG_FEATURES, 0);																		// We're going to use PIO mode
-	PortOutByte(io + ATA_REG_LBA1, 2048 & 0xFF);																// Tell the size of the buffer
-	PortOutByte(io + ATA_REG_LBA2, 2048 >> 8);
-	PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_PACKET);															// Send the PACKET command
+	PortOutByte(base + ATA_REG_FEATURES, 0);																	// We're going to use PIO mode
+	PortOutByte(base + ATA_REG_LBA1, size & 0xFF);																// Tell the size of the buffer
+	PortOutByte(base + ATA_REG_LBA2, (size >> 8) & 0xFF);
+	PortOutByte(base + ATA_REG_COMMAND, ATA_CMD_PACKET);
 	
-	if (!IDEPolling(io, True)) {																				// Poll and return error if error
+	if (!IDEPoll(base, True)) {																					// Poll and return error if error
 		return False;
 	}
 	
-	PortOutMultiple(io + ATA_REG_DATA, packet, 6);																// Send the packet
+	PortOutMultiple(base + ATA_REG_DATA, scmd, 6);																// Send the packet
 	
 	IDEWaitIRQ();																								// Wait for an IRQ
 	
-	if (!IDEPolling(io, True)) {																				// Poll, and... alright let's stop this
+	if (!IDEPoll(base, True)) {																					// Poll, and... alright let's stop this
 		return False;
 	}
 	
-	PortInMultiple(io + ATA_REG_DATA, buf, 1024);																// Read the data
+	PortInMultiple(base + ATA_REG_DATA, buf, size / 2);															// Read the data
 	
 	IDEWaitIRQ();																								// And wait for another IRQ
 	
-	while (PortInByte(io + ATA_REG_STATUS) & (ATA_SR_BSY | ATA_SR_DRQ)) ;										// Wait for BSY and DRQ to clear
+	while (PortInByte(base + ATA_REG_STATUS) & (ATA_SR_BSY | ATA_SR_DRQ)) ;										// Wait for BSY and DRQ to clear
 	
 	return True;
 }
 
-Boolean IDEReadSectors(UInt8 bus, UInt8 drive, UInt8 count, UInt32 lba, PUInt8 buf) {
-	if (bus > 1 || drive > 1) {																					// Valid?
-		return False;																							// No....
+static Boolean IDEATAReadSector(UInt16 base, Boolean slave, Boolean addr48, UIntPtr lba, PUInt8 buf) {
+	PortOutByte(base + ATA_REG_CONTROL, (IDEIRQInvoked = 0) + 2);												// Disable IRQs
+	
+	while (PortInByte(base + ATA_REG_STATUS) & ATA_SR_BSY) ;													// Poll until BSY is clear
+	
+	if (addr48 && lba >= 0x10000000) {																			// We support, and need 48-bit addressing?
+		PortOutByte(base + ATA_REG_HDDEVSEL, 0xE0 | (slave << 4));												// Yes!
+	} else if (lba >= 0x10000000) {																				// We don't support, and need 48-bit addressing?
+		return False;																							// No...
+	} else {																									// So, it's normal addressing
+		PortOutByte(base + ATA_REG_HDDEVSEL, 0xE0 | (slave << 4) | ((lba & 0xF0000000) >> 24));
 	}
 	
-	IDEDevice dev = IDEDevices[(bus * 2) + drive];																// Let's get our int device
-	
-	if (!dev.valid) {																							// Valid device?
-		return False;																							// No
+	if (lba >= 0x10000000) {																					// 48-bit addressing?
+		PortOutByte(base + ATA_REG_SECCOUNT0, 0);																// Yes, so setup 48-bit addressing mode
+		PortOutByte(base + ATA_REG_LBA3, ((lba & 0xFF000000) >> 24));
+		PortOutByte(base + ATA_REG_LBA4, 0);
+		PortOutByte(base + ATA_REG_LBA5, 0);
 	}
 	
+	PortOutByte(base + ATA_REG_SECCOUNT1, 1);																	// 1 sector per time
+	PortOutByte(base + ATA_REG_LBA0, (lba & 0xFF));																// Let's send the LBA
+	PortOutByte(base + ATA_REG_LBA1, ((lba & 0xFF00) >> 8));
+	PortOutByte(base + ATA_REG_LBA2, ((lba & 0xFF0000) >> 16));
+	
+	if (lba >= 0x10000000) {																					// Send extended (48-bits addressing mode) command?
+		PortOutByte(base + ATA_REG_COMMAND, ATA_CMD_READ_PIO_EXT);												// Yes
+	} else {
+		PortOutByte(base + ATA_REG_COMMAND, ATA_CMD_READ_PIO);													// No
+	}
+	
+	if (!IDEPoll(base, True)) {																					// Poll, and return error if error
+		return False;
+	}
+	
+	PortInMultiple(base + ATA_REG_DATA, buf, 256);																// Read the data
+	
+	return True;
+}
+
+static Boolean IDEATAWriteSector(UInt16 base, Boolean slave, Boolean addr48, UIntPtr lba, PUInt8 buf) {
+	PortOutByte(base + ATA_REG_CONTROL, (IDEIRQInvoked = 0) + 2);												// Disable IRQs
+	
+	while (PortInByte(base + ATA_REG_STATUS) & ATA_SR_BSY) ;													// Poll until BSY is clear
+	
+	if (addr48 && lba >= 0x10000000) {																			// We support, and need 48-bit addressing?
+		PortOutByte(base + ATA_REG_HDDEVSEL, 0xE0 | (slave << 4));												// Yes!
+	} else if (lba >= 0x10000000) {																				// We don't support, and need 48-bit addressing?
+		return False;																							// No...
+	} else {																									// So, it's normal addressing
+		PortOutByte(base + ATA_REG_HDDEVSEL, 0xE0 | (slave << 4) | ((lba & 0xF0000000) >> 24));
+	}
+	
+	if (lba >= 0x10000000) {																					// 48-bit addressing?
+		PortOutByte(base + ATA_REG_SECCOUNT0, 0);																// Yes, so setup 48-bit addressing mode
+		PortOutByte(base + ATA_REG_LBA3, ((lba & 0xFF000000) >> 24));
+		PortOutByte(base + ATA_REG_LBA4, 0);
+		PortOutByte(base + ATA_REG_LBA5, 0);
+	}
+	
+	PortOutByte(base + ATA_REG_SECCOUNT1, 1);																	// 1 sector per time
+	PortOutByte(base + ATA_REG_LBA0, (lba & 0xFF));																// Let's send the LBA
+	PortOutByte(base + ATA_REG_LBA1, ((lba & 0xFF00) >> 8));
+	PortOutByte(base + ATA_REG_LBA2, ((lba & 0xFF0000) >> 16));
+	
+	if (lba >= 0x10000000) {																					// Send extended (48-bits addressing mode) command?
+		PortOutByte(base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO_EXT);												// Yes
+	} else {
+		PortOutByte(base + ATA_REG_COMMAND, ATA_CMD_WRITE_PIO);													// No
+	}
+	
+	if (!IDEPoll(base, True)) {																					// Poll, and return error if error
+		return False;
+	}
+	
+	PortOutMultiple(base + ATA_REG_DATA, buf, 256);																// Read the data
+	
+	if (lba >= 0x10000000) {																					// Send extended (48-bits addressing mode) FLUSH command?
+		PortOutByte(base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH_EXT);											// Yes
+	} else {
+		PortOutByte(base + ATA_REG_COMMAND, ATA_CMD_CACHE_FLUSH);												// No
+	}
+	
+	IDEPoll(base, False);																						// Do some polling
+	
+	return True;
+}
+
+static Boolean IDEReadSectors(UInt16 base, Boolean slave, Boolean addr48, Boolean atapi, UIntPtr count, UIntPtr lba, PUInt8 buf) {
 	Boolean ret = False;
 	
-	if (dev.atapi) {																							// ATAPI?
-		for (UInt32 i = 0; i < count; i++) {																	// Yes, so use the ATAPI read sector function
-			ret = IDEATAPIReadSector(bus, drive, lba + i, buf + (i * 2048));
+	if (atapi) {																								// ATAPI?
+		for (UInt32 i = 0; i < count; i++) {																	// Yes, so use the read command using SCSI commands
+			ret = IDESendSCSICommand(base, slave, ATAPI_CMD_READ, lba + i, 1, 2048, buf + (i * 2048));
 		}
 	} else {
 		for (UInt32 i = 0; i < count; i++) {																	// No, so use the ATA read sector function
-			ret = IDEATAReadSector(bus, drive, lba + i, buf + (i * 512));
+			ret = IDEATAReadSector(base, slave, addr48, lba + i, buf + (i * 512));
 		}
 	}
 	
 	return ret;
 }
 
-Boolean IDEWriteSectors(UInt8 bus, UInt8 drive, UInt8 count, UInt32 lba, PUInt8 buf) {
-	if (bus > 1 || drive > 1) {																					// Valid?
-		return False;																							// No....
-	}
-	
-	IDEDevice dev = IDEDevices[(bus * 2) + drive];																// Let's get our int device
-	
-	if (!dev.valid) {																							// Valid device?
-		return False;																							// No
-	}
-	
+static Boolean IDEWriteSectors(UInt16 base, Boolean slave, Boolean addr48, Boolean atapi, UIntPtr count, UIntPtr lba, PUInt8 buf) {
 	Boolean ret = False;
 	
-	if (dev.atapi) {																							// ATAPI?
-		ret = False;																							// Yes... but we don't support ATAPI write...
+	if (atapi) {																								// ATAPI?
+		ret = False;																							// Yes, but we don't support the write operation on it :(
 	} else {
-		for (UInt32 i = 0; i < count; i++) {																	// No, so yse the ATA write sector function
-			ret = IDEATAWriteSector(bus, drive, lba + i, buf + (i * 512));
+		for (UInt32 i = 0; i < count; i++) {																	// No, so use the ATA write sector function
+			ret = IDEATAWriteSector(base, slave, addr48, lba + i, buf + (i * 512));
 		}
 	}
 	
 	return ret;
 }
 
-UIntPtr IDEGetBlockSize(UInt8 bus, UInt8 drive) {
-	if (bus > 1 || drive > 1) {
-		return 0;
-	}
-	
-	IDEDevice dev = IDEDevices[(bus * 2) + drive];
-	
-	if (!dev.valid) {
-		return 0;
-	}
-	
-	if (dev.atapi) {
-		return 2048;
-	} else {
-		return 512;
-	}
-}
-
-UInt8 IDEGetDeviceStatus(UInt32 bus, UInt32 drive) {
-	if (bus > 1 || drive > 1) {																					// Valid?
-		return 0;																								// No....
-	}
-	
-	IDEDevice dev = IDEDevices[(bus * 2) + drive];																// Let's get our int device
-	
-	if (!dev.valid) {																							// Valid device?
-		return 0;																								// No
-	} else if (!dev.atapi) {																					// ATAPI?
-		return 1;																								// No, so it is present
-	}
-	
-	UInt16 io = dev.io;
-	UInt8 slave = dev.slave;
-	UInt8 packet[12] = { 0 };
-	
-	PortOutByte(io + ATA_REG_CONTROL, IDEIRQInvoked = 0);														// This time, enable the IRQs
-	
-	packet[0] = ATAPI_CMD_TEST_UNIT_READY;																		// Setup SCSI packet
-	packet[1] = 0x00;
-	packet[2] = 0x00;
-	packet[3] = 0x00;
-	packet[4] = 0x00;
-	packet[5] = 0x00;
-	packet[6] = 0x00;
-	packet[7] = 0x00;
-	packet[8] = 0x00;
-	packet[9] = 0x00;
-	packet[10] = 0x00;
-	packet[11] = 0x00;
-	
-	PortOutByte(io + ATA_REG_HDDEVSEL, slave << 4);																// Select the drive
-	
-	for (UInt32 i = 0; i < 4; i++) {																			// 400 nanoseconds delay
-		PortInByte(io + ATA_REG_ALTSTATUS);
-	}
-	
-	PortOutByte(io + ATA_REG_FEATURES, 0);																		// We're going to use PIO mode
-	PortOutByte(io + ATA_REG_LBA1, 0x01);																		// Tell the size of the buffer
-	PortOutByte(io + ATA_REG_LBA2, 0x01);
-	PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_PACKET);															// Send the PACKET command
-	
-	if (!IDEPolling(io, True)) {																				// Poll and return error if error
-		return 0;
-	}
-	
-	PortOutMultiple(io + ATA_REG_DATA, packet, 6);																// Send the packet
-	
-	IDEWaitIRQ();																								// Wait for an IRQ
-	
-	UInt8 status = PortInByte(io + ATA_REG_ERROR);																// Read the data
-	
-	while (PortInByte(io + ATA_REG_STATUS) & (ATA_SR_BSY | ATA_SR_DRQ)) ;										// Wait for BSY and DRQ to clear
-	
-	return status == 0;																							// Return the status
-}
-
-Void IDEInitializeInt(UInt32 bus, UInt32 drive) {
-	UInt16 io = 0;
-	Boolean atapi = False;
-	
-	IDEDevices[(bus * 2) + drive].valid = False;																// For now, let's assume that there is no drive here
-	
-	if (bus == 0) {																								// Primary or secundary drive?
-		io = 0x1F0;																								// Primary
-	} else {
-		io = 0x170;																								// Secundary
-	}
-	
-	IDESelectDrive(bus, drive);																					// Select drive
-	
-	PortOutByte(io + ATA_REG_SECCOUNT0, 0);																		// These values should be zero before sending IDENTIFY
-	PortOutByte(io + ATA_REG_LBA0, 0);
-	PortOutByte(io + ATA_REG_LBA1, 0);
-	PortOutByte(io + ATA_REG_LBA2, 0);
-	
-	PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);														// Send IDENTIFY
-	
-	if (!(PortInByte(io + ATA_REG_STATUS))) {																	// Read the status port
-		return;
-	}
-	
-	Boolean err = False;
-	
-	while (True) {																									// Poll until BSY is clear
-		UInt8 status = PortInByte(io + ATA_REG_STATUS);
-		
-		if (status & ATA_SR_ERR) {																				// ERR set?
-			err = True;																							// So we can break and... well... ERROR (or, maybe, it's an ATAPI drive)
-			break;
-		}
-		
-		if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ)) {													// Everyting is alright?
-			break;																								// So we can break and continue
-		}
-	}
-	
-	if (err) {																									// ERR set?
-		UInt8 cl = PortInByte(io + ATA_REG_LBA1);																// This drive may be an ATAPI drive
-		UInt8 ch = PortInByte(io + ATA_REG_LBA2);
-		
-		if ((cl == 0x14 && ch == 0xEB) || (cl == 0x69 && ch == 0x96)) {											// ATAPI?
-			PortOutByte(io + ATA_REG_COMMAND, ATA_CMD_IDENTIFY_PACKET);											// Yes, so send ATAPI IDENTIFY PACKET
-			atapi = True;
-		} else {
-			return;																								// No... so just return
-		}
-	}
-	
-	for (UInt32 i = 0; i < 256; i++) {																			// Read the data
-		*(PUInt16)(IDEBuffer + i * 2) = PortInWord(io + ATA_REG_DATA);
-	}
-	
-	IDEDevices[(bus * 2) + drive].valid = True;																	// We're valid!
-	IDEDevices[(bus * 2) + drive].io = io;																		// Set the IO (base port)
-	IDEDevices[(bus * 2) + drive].slave = drive;																// Set if we're slave
-	IDEDevices[(bus * 2) + drive].atapi = atapi;																// Set if this is an atapi drive
-	IDEDevices[(bus * 2) + drive].addr48 = ((*((PUInt32)(IDEBuffer + ATA_IDENT_COMMANDSETS))) & (1 << 26));		// And use command set to get if we have 48-bit addressing
-	
-	for (UInt32 i = 0; i < 40; i += 2)	{																		// Get disk model
-		IDEDevices[(bus * 2) + drive].model[i] = IDEBuffer[ATA_IDENT_MODEL + i + 1];
-		IDEDevices[(bus * 2) + drive].model[i + 1] = IDEBuffer[ATA_IDENT_MODEL + i];
-	}
-	
-	IDEDevices[(bus * 2) + drive].model[40] = 0;																// End disk model stringz
-}
-
-Boolean IDEDeviceRead(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
-	UInt8 bus = (((UInt32)dev->priv) >> 8) & 0xFF;
-	UInt8 drive = ((UInt32)dev->priv) & 0xFF;
-	UIntPtr bsize = IDEGetBlockSize(bus, drive);																// Get the block size
-	
-	if (bsize == 0) {
-		return False;																							// Invalid device!
-	}
-	
+static Boolean IDEDeviceRead(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
+	PIDEDevice idev = (PIDEDevice)dev->priv;
+	UIntPtr bsize = idev->atapi ? 2048 : 512;																	// Get the block size
 	UIntPtr cur = off / bsize;
 	UIntPtr end = (off + len) / bsize;
 	
@@ -452,7 +224,7 @@ Boolean IDEDeviceRead(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 		
 		if (buff == Null) {
 			return False;																						// Failed...
-		} else if (!IDEReadSectors(bus, drive, 1, cur, buff)) {													// Read this block
+		} else if (!IDEReadSectors(idev->base, idev->slave, idev->addr48, idev->atapi, 1, cur, buff)) {			// Read this block
 			MemFree((UIntPtr)buff);																				// Failed...
 			return False;
 		}
@@ -467,7 +239,7 @@ Boolean IDEDeviceRead(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 		
 		if (buff == Null) {
 			return False;																						// Failed...
-		} else if (!IDEReadSectors(bus, drive, 1, end, buff)) {													// Read this block
+		} else if (!IDEReadSectors(idev->base, idev->slave, idev->addr48, idev->atapi, 1, end, buff)) {			// Read this block
 			MemFree((UIntPtr)buff);																				// Failed...
 			return False;
 		}
@@ -481,7 +253,7 @@ Boolean IDEDeviceRead(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 	}
 	
 	if (cur < end) {																							// Let's read!
-		if (!IDEReadSectors(bus, drive, end - cur, cur, buf + (off % bsize))) {
+		if (!IDEReadSectors(idev->base, idev->slave, idev->addr48, idev->atapi, end - cur, cur, buf + (off % bsize))) {
 			return False;																						// Failed...
 		}
 	}
@@ -489,15 +261,9 @@ Boolean IDEDeviceRead(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 	return True;
 }
 
-Boolean IDEDeviceWrite(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
-	UInt8 bus = (((UInt32)dev->priv) >> 8) & 0xFF;
-	UInt8 drive = ((UInt32)dev->priv) & 0xFF;
-	UIntPtr bsize = IDEGetBlockSize(bus, drive);																// Get the block size
-	
-	if (bsize == 0) {
-		return False;																							// Invalid device!
-	}
-	
+static Boolean IDEDeviceWrite(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
+	PIDEDevice idev = (PIDEDevice)dev->priv;
+	UIntPtr bsize = idev->atapi ? 2048 : 512;																	// Get the block size
 	UIntPtr cur = off / bsize;
 	UIntPtr end = (off + len) / bsize;
 	
@@ -506,14 +272,14 @@ Boolean IDEDeviceWrite(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 		
 		if (buff == Null) {
 			return False;																						// Failed...
-		} else if (!IDEReadSectors(bus, drive, 1, cur, buff)) {													// Read this block
+		} else if (!IDEReadSectors(idev->base, idev->slave, idev->addr48, idev->atapi, 1, cur, buff)) {			// Read this block
 			MemFree((UIntPtr)buff);																				// Failed...
 			return False;
 		}
 		
 		StrCopyMemory(buff + (off % bsize), buf + (off % bsize), bsize - (off % bsize));						// Write back to the buffer
 		
-		if (!IDEWriteSectors(bus, drive, 1, cur, buff)) {														// Write this block back
+		if (!IDEWriteSectors(idev->base, idev->slave, idev->addr48, idev->atapi, 1, cur, buff)) {				// Write this block back
 			MemFree((UIntPtr)buff);																				// Failed...
 			return False;
 		}
@@ -527,14 +293,14 @@ Boolean IDEDeviceWrite(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 		
 		if (buff == Null) {
 			return False;																						// Failed...
-		} else if (!IDEReadSectors(bus, drive, 1, end, buff)) {													// Read this block
+		} else if (!IDEReadSectors(idev->base, idev->slave, idev->addr48, idev->atapi, 1, end, buff)) {			// Read this block
 			MemFree((UIntPtr)buff);																				// Failed...
 			return False;
 		}
 		
 		StrCopyMemory(buff + ((off + len) % bsize), buf + len - ((off + len) % bsize), (off + len) % bsize);	// Write back to the buffer
 		
-		if (!IDEWriteSectors(bus, drive, 1, end, buff)) {														// Write this block back
+		if (!IDEWriteSectors(idev->base, idev->slave, idev->addr48, idev->atapi, 1, end, buff)) {				// Write this block back
 			MemFree((UIntPtr)buff);																				// Failed...
 			return False;
 		}
@@ -547,7 +313,7 @@ Boolean IDEDeviceWrite(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 	}
 	
 	if (cur < end) {																							// Let's write!
-		if (!IDEWriteSectors(bus, drive, end - cur, cur, buf + (off % bsize))) {
+		if (!IDEWriteSectors(idev->base, idev->slave, idev->addr48, idev->atapi, end - cur, cur, buf + (off % bsize))) {
 			return False;																						// Failed...
 		}
 	}
@@ -555,63 +321,138 @@ Boolean IDEDeviceWrite(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf) {
 	return True;
 }
 
-Boolean IDEDeviceControl(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf) {
-	(Void)dev; (Void)ibuf;																						// Avoid compiler's unused parameter warning
+static UInt8 IDEInitInt2(UInt16 base, Boolean slave, PBoolean addr48) {
+	Boolean atapi = False;
 	
-	UInt8 bus = (((UInt32)dev->priv) >> 8) & 0xFF;
-	UInt8 drive = ((UInt32)dev->priv) & 0xFF;
-	PUIntPtr out32 = (PUIntPtr)obuf;
-	PUInt8 out8 = (PUInt8)obuf;
+	PortOutByte(base + ATA_REG_HDDEVSEL, 0xA0 | (slave << 4));													// Select the drive
 	
-	if (cmd == 0) {																								// Get block size?
-		*out32 = IDEGetBlockSize(bus, drive);
-	} else if (cmd == 1) {																						// Get device status?
-		*out8 = IDEGetDeviceStatus(bus, drive);
-	} else {
-		return False;																							// ...
+	PortOutByte(base + ATA_REG_SECCOUNT0, 0);																	// These values should be zero before sending IDENTIFY
+	PortOutByte(base + ATA_REG_LBA0, 0);
+	PortOutByte(base + ATA_REG_LBA1, 0);
+	PortOutByte(base + ATA_REG_LBA2, 0);
+	
+	PortOutByte(base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY);														// Send IDENTIFY
+	
+	if (!(PortInByte(base + ATA_REG_STATUS))) {																	// Read the status port
+		return 0;
 	}
 	
-	return True;
+	Boolean err = False;
+	
+	while (True) {																								// Poll until BSY is clear
+		UInt8 status = PortInByte(base + ATA_REG_STATUS);
+		
+		if (status & ATA_SR_ERR) {																				// ERR set?
+			err = True;																							// So we can break and... well... ERROR (or, maybe, it's an ATAPI drive)
+			break;
+		}
+		
+		if (!(status & ATA_SR_BSY) && (status & ATA_SR_DRQ)) {													// Everyting is alright?
+			break;																								// So we can break and continue
+		}
+	}
+	
+	if (err) {																									// ERR set?
+		UInt8 cl = PortInByte(base + ATA_REG_LBA1);																// This drive may be an ATAPI drive
+		UInt8 ch = PortInByte(base + ATA_REG_LBA2);
+		
+		if ((cl == 0x14 && ch == 0xEB) || (cl == 0x69 && ch == 0x96)) {											// ATAPI?
+			PortOutByte(base + ATA_REG_COMMAND, ATA_CMD_IDENTIFY_PACKET);										// Yes, so send ATAPI IDENTIFY PACKET
+			atapi = True;
+		} else {
+			return 0;																							// No... so just return
+		}
+	}
+	
+	for (UInt32 i = 0; i < 256; i++) {																			// Read the data
+		*(PUInt16)(IDEBuffer + i * 2) = PortInWord(base + ATA_REG_DATA);
+	}
+	
+	*addr48 = ((*((PUInt32)(IDEBuffer + ATA_IDENT_COMMANDSETS))) & (1 << 26));									// And use command set to get if we have 48-bit addressing
+	
+	return atapi + 1;
 }
 
-Void IDEInit(Void) {
-	for (UInt16 i = 0, j = 0x3F6, k = 0x1F0; i < 2; i++, j -= 0x80, k -= 0x80) {								// We need to reset the drives, as the bios/(u)efi may fuck up them, and make us unable to receive ide irqs
-		PortOutByte(j, 4);																						// Let's reset this drive
-
-		for (UInt32 i = 0; i < 4; i++) {																		// 400 nanoseconds delay
-			PortInByte(k + ATA_REG_ALTSTATUS);
-		}
-
-		PortOutByte(j, 0);
+static Void IDEInitInt(PPCIDevice pdev) {
+	UInt32 basep = pdev->bar0 & ~1;																				// Get the base io port of the primary ide channel
+	UInt32 ctrlp = pdev->bar1 & ~1;																				// Get the base control port of the primary ide channel
+	UInt32 bases = pdev->bar2 & ~1;																				// Get the base io port of the secondary ide channel
+	UInt32 ctrls = pdev->bar3 & ~1;																				// Get the base control port of the secondary ide channel
+	
+	if ((basep == 0) || (basep == 1)) {																			// "Fix" everything (if it is 0 or 1, set it to the "default" value)
+		basep = 0x1F0;
 	}
 	
-	PortOutByte(0x1F0 + ATA_REG_CONTROL, 2);																	// Disable IRQs
-	PortOutByte(0x170 + ATA_REG_CONTROL, 2);
-	
-	IDTRegisterIRQHandler(0x0E, IDEHandler);																	// Register our IRQ handler
-	IDTRegisterIRQHandler(0x0F, IDEHandler);
-	
-	for (UInt32 i = 0; i < 2; i++) {																			// Init our IDE devices
-		for (UInt32 j = 0; j < 2; j++) {
-			IDEInitializeInt(i, j);
-		}
+	if ((ctrlp == 0) || (ctrlp == 1)) {
+		ctrlp = 0x3F6;
 	}
 	
-	for (UInt32 i = 0; i < 2; i++) {																			// And let's add them (the valid ones) to the device list!
+	if ((bases == 0) || (bases == 1)) {
+		bases = 0x170;
+	}
+	
+	if ((ctrls == 0) || (ctrls == 1)) {
+		ctrls = 0x376;
+	}
+	
+	IDEReset(basep, ctrlp);																						// We need to reset the drives, as the bios/(u)efi may fuck up them, and make us unable to receive ide irqs
+	IDEReset(bases, ctrls);
+	
+	PortOutByte(basep + ATA_REG_CONTROL, 2);																	// Disable IRQs
+	PortOutByte(bases + ATA_REG_CONTROL, 2);
+	
+	if (!IDEHandlerInit) {																						// The IDE handler is initialized?
+		IDTRegisterIRQHandler(0x0E, IDEHandler);																// No, so let's register our IRQ handler
+		IDTRegisterIRQHandler(0x0F, IDEHandler);
+		IDEHandlerInit = True;
+	}
+	
+	for (UInt32 i = 0; i < 2; i++) {																			// Let's detect ATA/ATAPI devices
 		for (UInt32 j = 0; j < 2; j++) {
-			if (IDEDevices[(i * 2) + j].valid) {																// Valid?
-				PVoid devbd = (PVoid)((i << 8) | j);															// Yes!
-				
-				if (IDEDevices[(i * 2) + j].atapi) {															// ATAPI?
-					if (!FsAddCdRom(devbd, IDEDeviceRead, IDEDeviceWrite, IDEDeviceControl)) {					// Yes, try to add it
-						DbgWriteFormated("[x86] Failed to add a IDE cdrom\r\n");
-					}
-				} else {
-					if (!FsAddHardDisk(devbd, IDEDeviceRead, IDEDeviceWrite, IDEDeviceControl)) {				// It's a hard disk, try to add it
-						DbgWriteFormated("[x86] Failed to add a IDE hard disk\r\n");
-					}
+			Boolean addr48 = False;																				// Try to detect this device
+			UInt8 res = IDEInitInt2((i == 0) ? basep : bases, j, &addr48);
+			
+			if (res == 0) {																						// This device exists?
+				continue;																						// Nope
+			}
+			
+			PIDEDevice dev = (PIDEDevice)MemAllocate(sizeof(IDEDevice));										// Ok, let's alloc our ide device struct
+			
+			if ((dev == Null) && (res == 2)) {
+				DbgWriteFormated("[x86] Failed to add a IDE cdrom\r\n");										// Failed (CdRom)
+				continue;
+			} else if (dev == Null) {
+				DbgWriteFormated("[x86] Failed to add a IDE hard disk\r\n");									// Failed (HardDisk)
+				continue;
+			}
+			
+			dev->base = (i == 0) ? basep : bases;																// Setup everything
+			dev->ctrl = (i == 0) ? ctrlp : ctrls;
+			dev->slave = j;
+			dev->atapi = res - 1;
+			dev->addr48 = addr48;
+			
+			if (dev->atapi) {																					// ATAPI?
+				if (!FsAddCdRom(dev, IDEDeviceRead, IDEDeviceWrite, Null)) {									// Yes, try to add it
+					DbgWriteFormated("[x86] Failed to add a IDE cdrom\r\n");
+					MemFree((UIntPtr)dev);
+				}
+			} else {
+				if (!FsAddHardDisk(dev, IDEDeviceRead, IDEDeviceWrite, Null)) {									// It's a hard disk, try to add it
+					DbgWriteFormated("[x86] Failed to add a IDE hard disk\r\n");
+					MemFree((UIntPtr)dev);
 				}
 			}
 		}
+	}
+}
+
+Void IDEInit(Void) {
+	UIntPtr i = 0;																								// Let's find and init all the IDE controllers
+	PPCIDevice dev = PCIFindDevice2(&i, PCI_CLASS_MASS, PCI_SUBCLASS_IDE);
+	
+	while (dev != Null) {
+		IDEInitInt(dev);
+		dev = PCIFindDevice2(&i, PCI_CLASS_MASS, PCI_SUBCLASS_IDE);
 	}
 }

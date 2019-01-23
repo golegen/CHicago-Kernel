@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 15 of 2018, at 19:05 BRT
-// Last edited on January 18 of 2019, at 18:25 BRT
+// Last edited on January 23 of 2019, at 13:46 BRT
 
 #include <chicago/alloc.h>
 
@@ -27,12 +27,14 @@ PVoid StrCopyMemory24(PVoid restrict dest, PVoid restrict src, UIntPtr count) {
 	
 	PUInt8 src8 = src;
 	PUInt8 dst8 = dest;
-	PUInt16 src16 = src + 1;
-	PUInt16 dst16 = dest + 1;
+	PUInt16 src16 = (PUInt16)(src8 + 1);
+	PUInt16 dst16 = (PUInt16)(dst8 + 1);
 	
 	while (count--) {																// GCC should optimize this for us :)
-		*dst8++ = *src8++;
+		*dst8 = *src8;
 		*dst16++ = *src16++;
+		dst8 += 3;
+		src8 += 3;
 	}
 	
 	return dest;
@@ -73,13 +75,14 @@ PVoid StrSetMemory24(PVoid dest, UInt32 val, UIntPtr count) {
 	}
 	
 	PUInt8 dst8 = dest;
-	PUInt16 dst16 = dest + 1;
+	PUInt16 dst16 = (PUInt16)(dst8 + 1);
 	UInt16 val16 = (UInt16)val;
 	UInt8 val8 = (UInt8)(val << 16);
 	
 	while (count--) {																// GCC should optimize this for us :)
-		*dst8++ = val8;
+		*dst8 = val8;
 		*dst16++ = val16;
+		dst8 += 3;
 	}
 	
 	return dest;

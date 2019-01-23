@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 14 of 2018, at 23:39 BRT
-// Last edited on January 18 of 2019, at 18:11 BRT
+// Last edited on January 23 of 2019, at 13:29 BRT
 
 #ifndef __CHICAGO_ARCH_IDE__
 #define __CHICAGO_ARCH_IDE__
@@ -75,18 +75,14 @@
 #define ATA_IDENT_COMMANDSETS 164
 #define ATA_IDENT_MAX_LBA_EXT 200
 
-typedef struct IDEDeviceStruct {
-	Boolean valid;
-	UInt16 io;
-	UInt8 slave;
+typedef struct {
+	UInt16 base;
+	UInt16 ctrl;
+	Boolean slave;
 	Boolean atapi;
 	Boolean addr48;
-	UInt8 model[41];
 } IDEDevice, *PIDEDevice;
 
-Boolean IDEReadSectors(UInt8 bus, UInt8 drive, UInt8 count, UInt32 lba, PUInt8 buf);
-Boolean IDEWriteSectors(UInt8 bus, UInt8 drive, UInt8 count, UInt32 lba, PUInt8 buf);
-UIntPtr IDEGetBlockSize(UInt8 bus, UInt8 drive);
 Void IDEInit(Void);
 
 #endif		// __CHICAGO_ARCH_IDE__

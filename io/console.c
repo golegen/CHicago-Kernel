@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on December 14 of 2018, at 15:15 BRT
+// Last edited on January 21 of 2019, at 23:16 BRT
 
 #include <chicago/display.h>
 #include <chicago/process.h>
@@ -13,6 +13,14 @@ UIntPtr ConCursorY = 0;
 Boolean ConRefresh = True;
 UIntPtr ConBackColor = 0xFF000000;
 UIntPtr ConForeColor = 0xFFAAAAAA;
+
+Void ConAcquireLock(Void) {
+	ConLock.locked = False;																											// Reset the lock
+	ConLock.owner = Null;
+	ConRefresh = True;																												// And the console attributes
+	ConBackColor = 0xFF000000;
+	ConForeColor = 0xFFAAAAAA;
+}
 
 Void ConSetRefresh(Boolean s) {
 	PsLock(&ConLock);																												// Lock

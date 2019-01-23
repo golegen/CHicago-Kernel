@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on January 17 of 2019, at 21:06 BRT
-// Last edited on January 19 of 2019, at 12:43 BRT
+// Last edited on January 23 of 2019, at 13:25 BRT
 
 #include <chicago/arch/ahci.h>
 #include <chicago/arch/ide.h>
@@ -47,17 +47,23 @@ static Void AHCIRebase(PHBAPort port, UIntPtr virt) {
 	PHBACmd cmd = (PHBACmd)virt;
 	
 	port->clb = phys;																									// Set the command list PHYSICAL location
+#ifndef ARCH_64
 	port->clbu = 0;
+#endif
 	StrSetMemory(cmd, 0, sizeof(HBACmd) * 32);																			// Clear the command list (using the VIRTUAL address)
 	
 	port->fb = phys + (sizeof(HBACmd) * 32);																			// Set the FIS PHYSICAL location
+#ifndef ARCH_64
 	port->fbu = 0;
+#endif
 	StrSetMemory((PUInt8)(virt + sizeof(HBACmd)), 0, 256);																// Clear the FIS (using the VIRTUAL address)
 	
 	for (UIntPtr i = 0; i < 32; i++) {
 		cmd[i].prdtl = 8;																								// 8 PRDT entries
 		cmd[i].ctba = phys + (sizeof(HBACmd) * 32) + 256 + (i * sizeof(HBACmdTbl));										// Set the command table PHYSICAL location
+#ifndef ARCH_64
 		cmd[i].ctbau = 0;
+#endif
 		StrSetMemory((PUInt8)(virt + (sizeof(HBACmd) * 32) + 256 + (i * sizeof(HBACmdTbl))), 0, sizeof(HBACmdTbl));		// Clear the command table (using the VIRTUAL address)
 	}
 	
@@ -454,7 +460,7 @@ static Boolean AHCIDeviceWrite(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf
 static Boolean AHCIDeviceControl(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf) {
 	(Void)dev; (Void)ibuf;																								// Avoid compiler's unused parameter warning
 	
-	PUIntPtr out32 = (PUIntPtr)obuf;
+	PUInt32 out32 = (PUInt32)obuf;
 	PUInt8 out8 = (PUInt8)obuf;
 	
 	if (cmd == 0) {																										// Get block size?
@@ -468,8 +474,8 @@ static Boolean AHCIDeviceControl(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 o
 	return False;
 }
 
-Void AHCIInit(UInt16 bus, UInt8 slot, UInt8 func) {
-	UIntPtr abarp = PCIReadLong(bus, slot, func, PCI_BAR5) & 0xFFFFFFF0;												// Read the BAR5 (ABAR physical address)
+static Void AHCIInitInt(PPCIDevice pdev) {
+	UIntPtr abarp = pdev->bar5 & 0xFFFFFFF0;																			// Get the BAR5 (ABAR physical address)
 	PHBAMem abar = (PHBAMem)MemAAllocate(sizeof(HBAMem), MM_PAGE_SIZE);													// Alloc space for mapping it into the virtual space
 	
 	if (abar == Null) {
@@ -544,14 +550,26 @@ Void AHCIInit(UInt16 bus, UInt8 slot, UInt8 func) {
 			if (dev->atapi) {																							// ATAPI?
 				if (!FsAddCdRom(dev, AHCIDeviceRead, AHCIDeviceWrite, AHCIDeviceControl)) {								// Yes, try to add it
 					DbgWriteFormated("[x86] Failed to add a SATA cdrom\r\n");
+					MemFree((UIntPtr)dev);
 				}
 			} else {
 				if (!FsAddHardDisk(dev, AHCIDeviceRead, AHCIDeviceWrite, AHCIDeviceControl)) {							// It's a hard disk, try to add it
 					DbgWriteFormated("[x86] Failed to add a SATA hard disk\r\n");
+					MemFree((UIntPtr)dev);
 				}
 			}
 		}
 		
 nope:;	port >>= 1;																										// Go to the next port
+	}
+}
+
+Void AHCIInit(Void) {
+	UIntPtr i = 0;																										// Let's find and init all the AHCI controllers
+	PPCIDevice dev = PCIFindDevice2(&i, PCI_CLASS_MASS, PCI_SUBCLASS_SATA);
+	
+	while (dev != Null) {
+		AHCIInitInt(dev);
+		dev = PCIFindDevice2(&i, PCI_CLASS_MASS, PCI_SUBCLASS_SATA);
 	}
 }

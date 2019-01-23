@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 18 of 2018, at 22:24 BRT
-// Last edited on December 09 of 2018, at 17:34 BRT
+// Last edited on January 23 of 2019, at 11:17 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -34,7 +34,7 @@ Boolean FrameBufferDeviceWrite(PDevice dev, UIntPtr off, UIntPtr len, PUInt8 buf
 Boolean FrameBufferDeviceControl(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf) {
 	(Void)dev; (Void)ibuf;																									// Avoid compiler's unused parameter warning
 	
-	PUIntPtr out = (PUIntPtr)obuf;
+	PUInt32 out = (PUInt32)obuf;
 	
 	if (cmd == 0) {																											// Get bytes per pixel
 		*out = DispGetBytesPerPixel();

@@ -1,13 +1,14 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 27 of 2018, at 21:48 BRT
-// Last edited on January 21 of 2019, at 16:40 BRT
+// Last edited on January 21 of 2019, at 23:17 BRT
 
 #include <chicago/arch/registers.h>
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
 #include <chicago/display.h>
+#include <chicago/nls.h>
 #include <chicago/panic.h>
 #include <chicago/process.h>
 
@@ -50,11 +51,14 @@ Void ArchPanicWriteHex(UInt64 val) {
 Void ArchPanic(UInt32 err, PVoid priv) {
 	if (PsCurrentThread != Null) {																				// Tasking initialized?
 		if (!((PsCurrentThread->id == 0) && (PsCurrentProcess->id == 0))) {										// Yes, this is the main kernel process?
-			PsExitProcess(1);																					// Nope, just PsExitProcess()
+			ConAcquireLock();																					// Nope, we don't want a dead lock, right?
+			ConWriteFormated(L"\r\n%s", NlsGetMessage(NLS_SEGFAULT));											// Print the error to the screen
+			PsExitProcess(1);																					// And just PsExitProcess()
 		}
 	}
 	
 	PsLockTaskSwitch(old);																						// Lock
+	ConAcquireLock();																							// We don't want a dead lock, right?
 	ConSetRefresh(False);																						// Disable the automatic screen refresh
 	PanicInt(err, False);																						// Print the "Sorry" message
 	

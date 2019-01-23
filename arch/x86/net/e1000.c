@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 19:40 BRT
-// Last edited on December 15 of 2018, at 21:40 BRT
+// Last edited on January 23 of 2019, at 13:28 BRT
 
 #include <chicago/arch/e1000.h>
 #include <chicago/arch/pci.h>
@@ -98,22 +98,16 @@ static Void E1000Handler(PVoid priv) {
 	}
 }
 
-Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
+static Void E1000InitInt(PPCIDevice pdev) {
 	PE1000Device dev = (PE1000Device)MemAllocate(sizeof(E1000Device));				// Alloc space for our priv struct
 	
 	if (dev == Null) {
 		return;																		// Failed...
 	}
 	
-	dev->bus = bus;																	// Set the PCI bus, slot and func
-	dev->slot = slot;
-	dev->func = func;
-	
-	UInt32 bar0 = PCIReadLong(bus, slot, func, PCI_BAR0);							// Read the BAR0
-	
-	if ((bar0 & 0x01) == 0x01) {													// We have IO base?
+	if ((pdev->bar0 & 0x01) == 0x01) {												// We have IO base?
 		dev->use_io = True;															// Yes :)
-		dev->io_base = bar0 & ~1;
+		dev->io_base = pdev->bar0 & ~1;
 	} else {
 		dev->use_io = False;														// No, so we're going to use the mem base
 		dev->mem_base = MemAAllocate(0x10000, MM_PAGE_SIZE);						// Alloc some virt space
@@ -123,7 +117,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 			return;
 		}
 		
-		UIntPtr phys = bar0 & ~3;													// Let's map the phys address to the new virt address
+		UIntPtr phys = pdev->bar0 & ~3;												// Let's map the phys address to the new virt address
 		
 		for (UIntPtr i = 0; i < 0x10000; i += MM_PAGE_SIZE) {
 			MmDereferencePage(MmGetPhys(dev->mem_base + i));						// MemAAllocate allocated some phys addr as well, free it
@@ -137,12 +131,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 		}
 	}
 	
-	UInt16 cmd = PCIReadWord(bus, slot, func, PCI_COMMAND);							// Let's enable bus mastering!
-	
-	if ((cmd & 0x04) != 0x04) {														// We really need to do it?
-		cmd |= 0x04;																// Yes, set the bus mastering bit
-		PCIWriteLong(bus, slot, func, PCI_COMMAND, cmd);							// And write back
-	}
+	PCIEnableBusMaster(pdev);														// Let's enable bus mastering!
 	
 	E1000WriteCommand(dev, 0x14, 0x01);												// Let's see if our E1000 have EEPROM!
 	
@@ -275,7 +264,7 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 	
 	dev->rx_cur = dev->tx_cur = 0;
 	
-	PCIRegisterIRQHandler(bus, slot, func, E1000Handler, dev);						// Register the IRQ handler
+	PCIRegisterIRQHandler(pdev, E1000Handler, dev);									// Register the IRQ handler
 	E1000WriteCommand(dev, 0xD0, 0x1F6DC);											// Enable interrupts
 	E1000WriteCommand(dev, 0xD0, 0xFB);
 	E1000ReadCommand(dev, 0xC0);
@@ -291,4 +280,14 @@ Void E1000Init(UInt16 bus, UInt8 slot, UInt8 func) {
 	E1000WriteCommand(dev, 0x3810, 0);
 	E1000WriteCommand(dev, 0x3818, 0);
 	E1000WriteCommand(dev, 0x400, 0x10400FA);
+}
+
+Void E1000Init(Void) {
+	UIntPtr i = 0;																	// Let's find and init all the E1000 cards
+	PPCIDevice dev = PCIFindDevice1(&i, PCI_VENDOR_INTEL, PCI_DEVICE_E1000);
+	
+	while (dev != Null) {
+		E1000InitInt(dev);
+		dev = PCIFindDevice1(&i, PCI_VENDOR_INTEL, PCI_DEVICE_E1000);
+	}
 }

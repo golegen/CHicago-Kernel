@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 18 of 2018, at 21:12 BRT
-// Last edited on December 11 of 2018, at 09:47 BRT
+// Last edited on January 23 of 2019, at 13:45 BRT
 
 #define __CHICAGO_DISPLAY__
 
@@ -126,7 +126,7 @@ Void DispPutPixel(UIntPtr x, UIntPtr y, UIntPtr c) {
 		*((PUInt16)(DispBackBuffer + (y * (DispWidth * 3)) + (x * 3))) = (UInt16)c;
 		*((PUInt8)(DispBackBuffer + (y * (DispWidth * 3)) + (x * 3) + 2)) = (UInt8)(c << 16);
 	} else if (DispBytesPerPixel == 4) {
-		*((PUIntPtr)(DispBackBuffer + (y * (DispWidth * 4)) + (x * 4))) = c;
+		*((PUInt32)(DispBackBuffer + (y * (DispWidth * 4)) + (x * 4))) = c;
 	}
 }
 

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 11 of 2018, at 18:17 BRT
-// Last edited on January 17 of 2019, at 21:14 BRT
+// Last edited on January 23 of 2019, at 13:17 BRT
 
 #ifndef __CHICAGO_ARCH_PCI_H__
 #define __CHICAGO_ARCH_PCI_H__
@@ -27,6 +27,7 @@
 #define PCI_BAR4 0x20
 #define PCI_BAR5 0x24
 #define PCI_INTERRUPT_LINE 0x3C
+#define PCI_INTERRUPT_PIN 0x3D
 #define PCI_SECONDARY_BUS 0x19
 
 #define PCI_VENDOR_INTEL 0x8086
@@ -35,6 +36,7 @@
 
 #define PCI_CLASS_MASS 0x01
 
+#define PCI_SUBCLASS_IDE 0x01
 #define PCI_SUBCLASS_SATA 0x06
 
 typedef Void (*PPCIInterruptHandlerFunc)(PVoid);
@@ -44,11 +46,28 @@ typedef struct {
 	PPCIInterruptHandlerFunc func;
 } PCIInterruptHandler, *PPCIInterruptHandler;
 
-UInt8 PCIReadByte(UInt16 bus, UInt8 slot, UInt8 func, UInt8 off);
-UInt16 PCIReadWord(UInt16 bus, UInt8 slot, UInt8 func, UInt8 off);
-UInt32 PCIReadLong(UInt16 bus, UInt8 slot, UInt8 func, UInt8 off);
-Void PCIWriteLong(UInt16 bus, UInt8 slot, UInt8 func, UInt8 off, UInt32 val);
-Void PCIRegisterIRQHandler(UInt16 bus, UInt8 slot, UInt8 func, PPCIInterruptHandlerFunc handler, PVoid priv);
+typedef struct {
+	UInt16 bus;
+	UInt8 slot;
+	UInt8 func;
+	UInt16 vendor;
+	UInt16 device;
+	UInt8 class;
+	UInt8 subclass;
+	UInt32 bar0;
+	UInt32 bar1;
+	UInt32 bar2;
+	UInt32 bar3;
+	UInt32 bar4;
+	UInt32 bar5;
+	UInt8 iline;
+	UInt8 ipin;
+} PCIDevice, *PPCIDevice;
+
+Void PCIRegisterIRQHandler(PPCIDevice dev, PPCIInterruptHandlerFunc handler, PVoid priv);
+PPCIDevice PCIFindDevice1(PUIntPtr last, UInt16 vendor, UInt16 device);
+PPCIDevice PCIFindDevice2(PUIntPtr last, UInt8 class, UInt8 subclass);
+Void PCIEnableBusMaster(PPCIDevice dev);
 Void PCIInit(Void);
 
 #endif		// __CHICAGO_ARCH_PCI_H__

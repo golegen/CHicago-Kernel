@@ -1,9 +1,11 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:21 BRT
-// Last edited on January 21 of 2019, at 16:38 BRT
+// Last edited on January 23 of 2019, at 13:33 BRT
 
+#include <chicago/arch/ahci.h>
 #include <chicago/arch/bootmgr.h>
+#include <chicago/arch/e1000.h>
 #include <chicago/arch/gdt.h>
 #include <chicago/arch/ide.h>
 #include <chicago/arch/idt.h>
@@ -83,6 +85,7 @@ Void ArchInitVMM(Void) {
 	}
 	
 	MmSetP4(0xFFFF808000000000, phys & PAGE_MASK, 0x03);														// Pre alloc this P4 entry for the kernel heap
+	MmInvlpg((UIntPtr)(&MmGetP4(0xFFFF808000000000)));															// Invalidate the TLB
 	HeapInit(0xFFFF808000000000, 0xFFFF810000000000);															// 512 GiB heap, starts at 0xFFFF808000000000 and ends at 0xFFFF810000000000
 }
 #else
@@ -136,9 +139,13 @@ Void ArchInit(Void) {
 	PITInit();																									// Init the PIT
 	DbgWriteFormated("[x86] PIT initialized\r\n");
 	
+	PCIInit();																									// Init the PCI device list
+	DbgWriteFormated("[x86] PCI initialized\r\n");
+	
 	FsInitDeviceList();																							// Init the x86-only devices (and the device list)
+	E1000Init();
+	AHCIInit();
 	IDEInit();
-	PCIInit();
 	
 	PWChar bootdev = (PWChar)MemAllocate((StrGetLengthC(BootmgrBootDev) + 1) * 4);								// Let's transform the C string into unicode!
 	
