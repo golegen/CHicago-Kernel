@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on June 28 of 2018, at 19:19 BRT
-// Last edited on November 17 of 2018, at 14:01 BRT
+// Last edited on January 24 of 2019, at 19:57 BRT
 
 #include <chicago/arch/vmm.h>
 
@@ -180,9 +180,12 @@ Boolean MmMap(UIntPtr virt, UIntPtr phys, UInt32 flags) {
 		} else {
 			MmSetPDE(virt, block, 0x07);																// No, so put the pde as present, writeable and set the user bit
 		}
+		
+		MmInvlpg((UIntPtr)(&MmGetPDE(virt)));															// Refresh the TLB
 	}
 	
 	MmSetPTE(virt, phys, flags2);																		// Map the phys addr to the virt addr
+	MmInvlpg(virt);																						// Refresh the TLB
 	
 	return True;
 }

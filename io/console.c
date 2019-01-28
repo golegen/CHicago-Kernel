@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on January 21 of 2019, at 23:16 BRT
+// Last edited on January 27 of 2019, at 21:20 BRT
 
 #include <chicago/display.h>
 #include <chicago/process.h>
@@ -133,6 +133,7 @@ Void ConClearScreen(Void) {
 	PsLock(&ConLock);																												// Lock
 	DispClearScreen(ConBackColor);																									// Clear the screen
 	ConCursorX = ConCursorY = 0;																									// Move the cursor to 0, 0
+	DispFillRectangle(0, 0, 8, 16, ConForeColor);
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -201,7 +202,9 @@ static Void ConWriteCharacterInt(WChar data) {
 
 Void ConWriteCharacter(WChar data) {
 	PsLock(&ConLock);																												// Lock
+	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);
 	ConWriteCharacterInt(data);																										// Write the character
+	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -222,7 +225,9 @@ static Void ConWriteStringInt(PWChar data) {
 
 Void ConWriteString(PWChar data) {
 	PsLock(&ConLock);																												// Lock
+	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);
 	ConWriteStringInt(data);																										// Write the string
+	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -249,7 +254,9 @@ static Void ConWriteIntegerInt(UIntPtr data, UInt8 base) {
 
 Void ConWriteInteger(UIntPtr data, UInt8 base) {
 	PsLock(&ConLock);																												// Lock
+	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);
 	ConWriteIntegerInt(data, base);																									// Write the integer
+	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -264,6 +271,7 @@ Void ConWriteFormated(PWChar data, ...) {
 	}
 	
 	PsLock(&ConLock);																												// Lock
+	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);
 	
 	VariadicList va;
 	VariadicStart(va, data);																										// Let's start our va list with the arguments provided by the user (if any)
@@ -314,6 +322,7 @@ Void ConWriteFormated(PWChar data, ...) {
 	}
 	
 	VariadicEnd(va);
+	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
