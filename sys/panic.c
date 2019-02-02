@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 27 of 2018, at 21:37 BRT
-// Last edited on December 09 of 2018, at 20:04 BRT
+// Last edited on February 02 of 2019, at 11:37 BRT
 
 #include <chicago/console.h>
 #include <chicago/nls.h>
@@ -16,7 +16,8 @@ PWChar PanicStrings[PANIC_COUNT] = {
 
 Void PanicInt(UInt32 err, Boolean perr) {
 	if (!perr) {																														// Print the "Sorry" message?
-		ConSetColor(0xFF8B0000, 0xFFFFFFFF);																							// Yes. Red background, white foreground
+		ConSetCursorEnabled(False);																										// Yes, disable the cursor
+		ConSetColor(0xFF8B0000, 0xFFFFFFFF);																							// Red background, white foreground
 		ConClearScreen();																												// Clear the screen
 		ConWriteFormated(NlsGetMessage(NLS_PANIC_SORRY));																				// And print the "Sorry" message
 	} else {																															// Print the error code?

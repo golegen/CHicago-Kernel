@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on January 27 of 2019, at 21:20 BRT
+// Last edited on February 02 of 2019, at 11:37 BRT
 
 #include <chicago/display.h>
 #include <chicago/process.h>
@@ -11,6 +11,7 @@ Lock ConLock = { False, Null };
 UIntPtr ConCursorX = 0;
 UIntPtr ConCursorY = 0;
 Boolean ConRefresh = True;
+Boolean ConCursorEnabled = True;
 UIntPtr ConBackColor = 0xFF000000;
 UIntPtr ConForeColor = 0xFFAAAAAA;
 
@@ -18,6 +19,7 @@ Void ConAcquireLock(Void) {
 	ConLock.locked = False;																											// Reset the lock
 	ConLock.owner = Null;
 	ConRefresh = True;																												// And the console attributes
+	ConCursorEnabled = True;
 	ConBackColor = 0xFF000000;
 	ConForeColor = 0xFFAAAAAA;
 }
@@ -31,6 +33,27 @@ Void ConSetRefresh(Boolean s) {
 Boolean ConGetRefresh(Void) {
 	PsLock(&ConLock);																												// Lock
 	Boolean s = ConRefresh;																											// Save the automatic refresh prop
+	PsUnlock(&ConLock);																												// Unlock
+	return s;																														// Return it
+}
+
+Void ConSetCursorEnabled(Boolean e) {
+	PsLock(&ConLock);																												// Lock
+	
+	if (e && !ConCursorEnabled) {																									// Draw the new cursor?
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);													// Yes
+	} else if (!e && ConCursorEnabled) {																							// Erase the old cursor?
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);													// Yes
+	}
+	
+	ConCursorEnabled = e;																											// Set the cursor enabled prop
+	
+	PsUnlock(&ConLock);																												// Unlock
+}
+
+Boolean ConGetCursorEnabled(Void) {
+	PsLock(&ConLock);																												// Lock
+	Boolean s = ConCursorEnabled;																									// Save the cursor enabled prop
 	PsUnlock(&ConLock);																												// Unlock
 	return s;																														// Return it
 }
@@ -133,7 +156,10 @@ Void ConClearScreen(Void) {
 	PsLock(&ConLock);																												// Lock
 	DispClearScreen(ConBackColor);																									// Clear the screen
 	ConCursorX = ConCursorY = 0;																									// Move the cursor to 0, 0
-	DispFillRectangle(0, 0, 8, 16, ConForeColor);
+	
+	if (ConCursorEnabled) {																											// Draw the cursor?
+		DispFillRectangle(0, 0, 8, 16, ConForeColor);																				// Yes
+	}
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -202,9 +228,16 @@ static Void ConWriteCharacterInt(WChar data) {
 
 Void ConWriteCharacter(WChar data) {
 	PsLock(&ConLock);																												// Lock
-	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);
+	
+	if (ConCursorEnabled) {																											// Erase the old cursor?
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);													// Yes
+	}
+	
 	ConWriteCharacterInt(data);																										// Write the character
-	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);
+	
+	if (ConCursorEnabled) {																											// Draw the new cursor?
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);													// Yes
+	}
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -225,9 +258,16 @@ static Void ConWriteStringInt(PWChar data) {
 
 Void ConWriteString(PWChar data) {
 	PsLock(&ConLock);																												// Lock
-	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);
+	
+	if (ConCursorEnabled) {																											// Erase the old cursor?
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);													// Yes
+	}
+	
 	ConWriteStringInt(data);																										// Write the string
-	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);
+	
+	if (ConCursorEnabled) {																											// Draw the new cursor?
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);													// Yes
+	}
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -254,9 +294,16 @@ static Void ConWriteIntegerInt(UIntPtr data, UInt8 base) {
 
 Void ConWriteInteger(UIntPtr data, UInt8 base) {
 	PsLock(&ConLock);																												// Lock
-	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);
+	
+	if (ConCursorEnabled) {																											// Erase the old cursor?
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);													// Yes
+	}
+	
 	ConWriteIntegerInt(data, base);																									// Write the integer
-	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);
+	
+	if (ConCursorEnabled) {																											// Draw the new cursor?
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);													// Yes
+	}
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -271,7 +318,10 @@ Void ConWriteFormated(PWChar data, ...) {
 	}
 	
 	PsLock(&ConLock);																												// Lock
-	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);
+	
+	if (ConCursorEnabled) {																											// Erase the old cursor?
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);													// Yes
+	}
 	
 	VariadicList va;
 	VariadicStart(va, data);																										// Let's start our va list with the arguments provided by the user (if any)
@@ -322,7 +372,10 @@ Void ConWriteFormated(PWChar data, ...) {
 	}
 	
 	VariadicEnd(va);
-	DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);
+	
+	if (ConCursorEnabled) {																											// Draw the new cursor?
+		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);													// Yes
+	}
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:24 BRT
-// Last edited on January 21 of 2019, at 23:15 BRT
+// Last edited on February 02 of 2019, at 11:37 BRT
 
 #ifndef __CHICAGO_CONSOLE_H__
 #define __CHICAGO_CONSOLE_H__
@@ -11,6 +11,7 @@
 Void ConAcquireLock(Void);
 Void ConSetRefresh(Boolean s);
 Boolean ConGetRefresh(Void);
+Void ConSetCursorEnabled(Boolean e);
 Void ConSetColor(UIntPtr bg, UIntPtr fg);
 Void ConSetBackground(UIntPtr c);
 Void ConSetForeground(UIntPtr c);
