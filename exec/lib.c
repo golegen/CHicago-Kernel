@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 10 of 2018, at 21:18 BRT
-// Last edited on December 09 of 2018, at 19:06 BRT
+// Last edited on February 23 of 2019, at 11:38 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/chexec.h>
@@ -195,7 +195,7 @@ Boolean ExecFillSymbolTable(PList list, UIntPtr base, PExecHandle handle, PUInt8
 			return False;
 		}
 		
-		sm->name = (PWChar)MmAllocUserMemory(sym->name_len);																		// Alloc space for the name
+		sm->name = (PWChar)MmAllocUserMemory(sym->name_len);																	// Alloc space for the name
 		
 		if (sm->name == Null) {
 			MmFreeUserMemory((UIntPtr)sm);																						// Failed...
@@ -247,36 +247,36 @@ Boolean ExecRelocate(UIntPtr base, PExecHandle handle, PUInt8 buf) {
 	PCHExecRelocation rel = (PCHExecRelocation)(((UIntPtr)buf) + hdr->rel_start);
 	
 	for (UIntPtr i = 0; i < hdr->rel_count; i++) {																				// Let's do it...
-		PUIntPtr loc = (PUIntPtr)(base + rel->virt);
+		UIntPtr incr = rel->incr;
 		
-		if (rel->op == 0) {																										// Absolute
-			*loc += base;																										// Just add the base to it!
-		} else if (rel->op == 1) {																								// Symbol
-			UIntPtr sym = ExecGetSymbol(handle, rel->name);																		// Try to get the symbol
+		if ((rel->op & CHEXEC_REL_OP_REL) == CHEXEC_REL_OP_REL) {																// Relative
+			incr -= rel->virt;
+		} else if ((rel->op & CHEXEC_REL_OP_SYM) == CHEXEC_REL_OP_SYM) {														// Symbol
+			UIntPtr sym = ExecGetSymbol(Null, rel->name);																		// Try to get the symbol
 			
 			if (sym == 0) {
 				return False;																									// Failed
 			}
 			
-			*loc = sym;
-		} else if (rel->op == 2) {																								// Relative symbol
-			UIntPtr sym = ExecGetSymbol(handle, rel->name);																		// Try to get the symbol
+			incr += sym;
+		} else if ((rel->op & CHEXEC_REL_OP_REL_SYM) == CHEXEC_REL_OP_REL_SYM) {												// Relative symbol
+			UIntPtr sym = ExecGetSymbol(Null, rel->name);																		// Try to get the symbol
 			
 			if (sym == 0) {
 				return False;																									// Failed
 			}
 			
-			*loc += sym - (UIntPtr)loc;
-		} else if (rel->op == 3) {																								// Symbol as base
-			UIntPtr sym = ExecGetSymbol(handle, rel->name);																		// Try to get the symbol
-			
-			if (sym == 0) {
-				return False;																									// Failed
-			}
-			
-			*loc += sym;
+			incr += sym - (base + rel->virt);
 		} else {
-			return False;																										// Unimplemented relocation...
+			incr += base;																										// Absolute
+		}
+		
+		if ((rel->op & CHEXEC_REL_OP_BYTE) == CHEXEC_REL_OP_BYTE) {																// Byte
+			*((PUInt8)(base + rel->virt)) += (UInt8)incr;
+		} else if ((rel->op & CHEXEC_REL_OP_WORD) == CHEXEC_REL_OP_WORD) {														// Word
+			*((PUInt16)(base + rel->virt)) += (UInt16)incr;
+		} else if ((rel->op & CHEXEC_REL_OP_DWORD) == CHEXEC_REL_OP_DWORD) {													// DWord
+			*((PUInt32)(base + rel->virt)) += (UInt32)incr;
 		}
 		
 		rel = (PCHExecRelocation)(((UIntPtr)rel) + sizeof(CHExecRelocation) + rel->name_len);
@@ -286,7 +286,7 @@ Boolean ExecRelocate(UIntPtr base, PExecHandle handle, PUInt8 buf) {
 }
 
 static Boolean ExecLoadLibraryInt(PExecHandle handle, PUInt8 buf) {
-	if (!CHExecValidateHeader(buf, False)) {																					// Validate the header
+	if (!CHExecValidateHeader(buf, CHEXEC_HEADER_FLAGS_LIBRARY)) {																// Validate the header
 		ListFree(handle->deps);																									// Invalid CHExec file :(
 		ListFree(handle->symbols);
 		MmFreeUserMemory((UIntPtr)handle->name);

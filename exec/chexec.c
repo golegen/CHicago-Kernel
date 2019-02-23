@@ -1,14 +1,14 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 10 of 2018, at 21:11 BRT
-// Last edited on November 10 of 2018, at 21:11 BRT
+// Last edited on February 22 of 2019, at 20:27 BRT
 
 #include <chicago/chexec.h>
 #include <chicago/mm.h>
 #include <chicago/string.h>
 #include <chicago/virt.h>
 
-Boolean CHExecValidateHeader(PUInt8 buf, Boolean exec) {
+Boolean CHExecValidateHeader(PUInt8 buf, UInt8 type) {
 	if (buf == Null) {																							// Valid buffer?
 		return False;																							// No...
 	}
@@ -23,17 +23,7 @@ Boolean CHExecValidateHeader(PUInt8 buf, Boolean exec) {
 		return False;																							// No...
 	}
 	
-	if (exec) {																									// Check the exec flag?
-		if ((hdr->flags & CHEXEC_HEADER_FLAGS_EXECUTABLE) != CHEXEC_HEADER_FLAGS_EXECUTABLE) {					// Yes
-			return False;
-		}
-	} else {
-		if ((hdr->flags & CHEXEC_HEADER_FLAGS_LIBRARY) != CHEXEC_HEADER_FLAGS_LIBRARY) {						// No, so let's check the lib flag
-			return False;
-		}
-	}
-	
-	return True;
+	return (hdr->flags & type) == type;																			// Check the type
 }
 
 UIntPtr CHExecLoadSections(PUInt8 buf) {

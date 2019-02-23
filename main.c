@@ -1,12 +1,13 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on January 22 of 2019, at 20:42 BRT
+// Last edited on February 23 of 2019, at 12:06 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
 #include <chicago/debug.h>
 #include <chicago/display.h>
+#include <chicago/exec.h>
 #include <chicago/file.h>
 #include <chicago/ipc.h>
 #include <chicago/net.h>
@@ -79,6 +80,17 @@ Void KernelMainLate(Void) {
 	ConWriteFormated(NlsGetMessage(NLS_OS_CODENAME), CHICAGO_CODENAME);
 	ConWriteFormated(NlsGetMessage(NLS_OS_VSTR), CHICAGO_MAJOR, CHICAGO_MINOR, CHICAGO_BUILD);
 	
-	ShellRun();																												// Run the shell!
+	PProcess proc = ExecCreateProcess(L"\\System\\Programs\\sesmgr.che");													// Let's try to create the session manager process
+	
+	if (proc == Null) {
+		ShellRun();																											// ... So let's fallback to the kernel shell
+	} else {
+		UIntPtr pid = proc->id;																								// Save the pid of the session manager process
+		PsAddProcess(proc);																									// RUN!
+		PsWaitProcess(pid);																									// Session manager is not supposed to exit, so this function should never return
+		DbgWriteFormated("PANIC! The \\System\\Programs\\sesmgr.che program closed\r\n");									// ...
+		Panic(PANIC_KERNEL_UNEXPECTED_ERROR);																				// Panic
+	}
+	
 	while (True) { PsSwitchTask(PsDontRequeue); }																			// Don't requeue us
 }

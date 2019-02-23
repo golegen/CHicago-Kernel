@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 28 of 2018, at 01:09 BRT
-// Last edited on December 16 of 2018, at 18:43 BRT
+// Last edited on February 22 of 2019, at 22:29 BRT
 
 #define __CHICAGO_ARCH_PROCESS__
 
@@ -157,6 +157,6 @@ Void PsSwitchTask(PVoid priv) {
 			PsCurrentThread = Null;																					// Nope
 		}
 		
-		Asm Volatile("int $0x3E");																					// Let's use int 0x3E!
+		Asm Volatile("sti; int $0x3E");																				// Let's use int 0x3E!
 	}
 }

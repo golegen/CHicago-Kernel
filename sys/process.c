@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:59 BRT
-// Last edited on December 16 of 2018, at 18:44 BRT
+// Last edited on February 23 of 2019, at 12:00 BRT
 
 #define __CHICAGO_PROCESS__
 
@@ -113,7 +113,7 @@ PProcess PsCreateProcessInt(PWChar name, UIntPtr entry, UIntPtr dir) {
 		return Null;
 	}
 	
-	th->id = proc->last_fid++;																													// Set the thread id
+	th->id = proc->last_tid++;																													// Set the thread id
 	th->parent = proc;																															// And the parent process
 	
 	if (!ListAdd(proc->threads, th)) {																											// Add it!
@@ -522,7 +522,6 @@ Void PsExitProcess(UIntPtr ret) {
 	MemFree((UIntPtr)PsCurrentProcess);																											// And the current process itself
 //	PsFreeContext(PsCurrentThread->ctx);																										// BUG: When we try to free the current thread context, we get a page fault
 	MemFree((UIntPtr)PsCurrentThread);																											// Free the thread struct
-	
 	PsUnlockTaskSwitch(old);																													// Unlock
 	PsSwitchTask(PsDontRequeue);																												// Switch to the next process
 	ArchHalt();																																	// Halt
@@ -560,7 +559,7 @@ Void PsWakeup(PList list, PThread th) {
 	th->waitt = Null;
 	th->waitp = Null;
 	
-	ListAdd(PsThreadQueue, th);
+	QueueAdd(PsThreadQueue, th);
 	PsUnlockTaskSwitch(old);
 }
 
