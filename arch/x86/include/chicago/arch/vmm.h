@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on June 28 of 2018, at 19:26 BRT
-// Last edited on November 17 of 2018, at 11:43 BRT
+// Last edited on February 23 of 2019, at 13:23 BRT
 
 #ifndef __CHICAGO_ARCH_VMM_H__
 #define __CHICAGO_ARCH_VMM_H__
@@ -20,6 +20,6 @@
 #define MmGetPTE(i) MmGetPTEInt(0xFFC00000, i)
 #define MmSetPTE(i, p, f) MmSetPTEInt(0xFFC00000, i, p, f)
 
-#define MmInvlpg(i) Asm Volatile("invlpg %0" :: "m"(*((PChar)((i) & ~0xFFF))))
+#define MmInvlpg(i) Asm Volatile("invlpg (%0)" :: "r"((i) & ~0xFFF) : "memory")
 
 #endif		// __CHICAGO_ARCH_VMM_H__
