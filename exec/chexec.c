@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on November 10 of 2018, at 21:11 BRT
-// Last edited on February 22 of 2019, at 20:27 BRT
+// Last edited on February 23 of 2019, at 15:44 BRT
 
 #include <chicago/chexec.h>
 #include <chicago/mm.h>
@@ -14,7 +14,7 @@ Boolean CHExecValidateHeader(PUInt8 buf, UInt8 type) {
 	}
 	
 	PCHExecHeader hdr = (PCHExecHeader)buf;
-	
+
 	if (hdr->magic != CHEXEC_HEADER_MAGIC) {																	// Valid magic?
 		return False;																							// No...
 	}
