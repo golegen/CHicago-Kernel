@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on December 16 of 2018, at 18:06 BRT
+// Last edited on February 24 of 2019, at 16:35 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -469,8 +469,6 @@ static Void ShellMain(Void) {
 			ConWriteFormated(NlsGetMessage(NLS_SHELL_INVALID), argv[0]);																				// Invalid command!
 		}
 	}
-	
-	ArchHalt();																																			// We should never get here...
 }
 
 Void ShellRun(Void) {

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 16 of 2018, at 18:28 BRT
-// Last edited on January 18 of 2019, at 18:24 BRT
+// Last edited on February 24 of 2019, at 16:43 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/debug.h>
@@ -282,7 +282,7 @@ Boolean FsMountFile(PWChar path, PWChar file, PWChar type) {
 	if ((dest == Null) && (!StrCompare(path, L"\\"))) {																					// Failed (and we aren't trying to mount the root directory)?
 		FsCloseFile(src);																												// Yes, close the src file
 		return False;																													// And return
-	} else {
+	} else if (dest != Null) {
 		if (!StrCompare(path, L"\\")) {																									// Trying to mount the root directory?
 			if ((dest->flags & FS_FLAG_DIR) != FS_FLAG_DIR) {																			// No, so we need to check if the dest is an directory!
 				FsCloseFile(dest);																										// Isn't, so close it, close src and return
@@ -435,20 +435,8 @@ Boolean FsControlFile(PFsNode file, UIntPtr cmd, PUInt8 ibuf, PUInt8 obuf) {
 }
 
 PFsMountPoint FsGetMountPoint(PWChar path, PWChar *outp) {
-	if (FsMountPointList == Null) {																										// The mount point list is initialized?
+	if ((FsMountPointList == Null) || (path == Null)) {																					// The mount point list is initialized? Path is Null?
 		if (outp != Null) {																												// Nope, so let's set the outp (out pointer) to Null and return Null
-			*outp = Null;
-		}
-		
-		return Null;
-	} else if (FsMountPointList == Null) {																								// The mount point list have any entry?
-		if (outp != Null) {																												// Nope, so let's set the outp (out pointer) to Null and return Null
-			*outp = Null;
-		}
-		
-		return Null;
-	} else if (path == Null) {																											// Path is Null?
-		if (outp != Null) {																												// Yes, so do the same as the two above cases
 			*outp = Null;
 		}
 		

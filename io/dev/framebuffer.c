@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 18 of 2018, at 22:24 BRT
-// Last edited on January 23 of 2019, at 11:17 BRT
+// Last edited on February 24 of 2019, at 16:30 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -38,9 +38,9 @@ Boolean FrameBufferDeviceControl(PDevice dev, UIntPtr cmd, PUInt8 ibuf, PUInt8 o
 	
 	if (cmd == 0) {																											// Get bytes per pixel
 		*out = DispGetBytesPerPixel();
-	} else if (cmd == 0) {																									// Get width
+	} else if (cmd == 1) {																									// Get width
 		*out = DispGetWidth();
-	} else if (cmd == 1) {																									// Get height
+	} else if (cmd == 2) {																									// Get height
 		*out = DispGetHeight();
 	} else {
 		return False;																										// ...
