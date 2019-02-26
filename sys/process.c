@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 27 of 2018, at 14:59 BRT
-// Last edited on February 23 of 2019, at 12:00 BRT
+// Last edited on February 26 of 2019, at 20:14 BRT
 
 #define __CHICAGO_PROCESS__
 
@@ -83,6 +83,7 @@ PProcess PsCreateProcessInt(PWChar name, UIntPtr entry, UIntPtr dir) {
 		MmFreeDirectory(proc->dir);																												// Failed...
 		MemFree((UIntPtr)proc->name);
 		MemFree((UIntPtr)proc);
+		return Null;
 	}
 	
 	proc->last_tid = 0;

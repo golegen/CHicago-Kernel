@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on September 15 of 2018, at 12:46 BRT
-// Last edited on November 03 of 2018, at 17:53 BRT
+// Last edited on February 26 of 2019, at 20:13 BRT
 
 #include <chicago/mm.h>
 #include <chicago/process.h>
@@ -54,7 +54,7 @@ UInt32 VirtConvertFlags2(UInt32 flags) {
 UIntPtr VirtAllocAddress(UIntPtr addr, UIntPtr size, UInt32 flags) {
 	Boolean check = True;
 	
-	if ((size % MM_PAGE_SIZE) == MM_PAGE_SIZE) {										// Page align the size
+	if ((size % MM_PAGE_SIZE) != 0) {													// Page align the size
 		size += MM_PAGE_SIZE - (size % MM_PAGE_SIZE);
 	}
 	
@@ -125,7 +125,7 @@ Boolean VirtFreeAddress(UIntPtr addr, UIntPtr size) {
 		addr -= addr % MM_PAGE_SIZE;													// No, page align it!
 	}
 	
-	if ((size % MM_PAGE_SIZE) == MM_PAGE_SIZE) {										// Page align the size
+	if ((size % MM_PAGE_SIZE) != 0) {													// Page align the size
 		size += MM_PAGE_SIZE - (size % MM_PAGE_SIZE);
 	}
 	
@@ -160,7 +160,7 @@ Boolean VirtChangeProtection(UIntPtr addr, UIntPtr size, UInt32 flags) {
 		addr -= addr % MM_PAGE_SIZE;													// Nope, let's page align this addr!
 	}
 	
-	if ((size % MM_PAGE_SIZE) == MM_PAGE_SIZE) {										// Page align the size
+	if ((size % MM_PAGE_SIZE) != 0) {													// Page align the size
 		size += MM_PAGE_SIZE - (size % MM_PAGE_SIZE);
 	}
 	
