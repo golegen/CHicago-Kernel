@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on June 28 of 2018, at 19:20 BRT
-// Last edited on December 14 of 2018, at 13:00 BRT
+// Last edited on February 28 of 2019, at 18:43 BRT
 
 #ifndef __CHICAGO_ARCH_PMM_H__
 #define __CHICAGO_ARCH_PMM_H__
@@ -10,6 +10,7 @@
 
 extern PUIntPtr MmPageMap;
 extern PUIntPtr MmPageReferences;
+extern UIntPtr MmMaxIndex;
 extern UIntPtr MmMaxPages;
 extern UIntPtr MmUsedPages;
 

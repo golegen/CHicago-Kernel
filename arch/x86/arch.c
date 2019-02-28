@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:21 BRT
-// Last edited on January 23 of 2019, at 13:33 BRT
+// Last edited on February 28 of 2019, at 18:44 BRT
 
 #include <chicago/arch/ahci.h>
 #include <chicago/arch/bootmgr.h>
@@ -37,7 +37,6 @@ Void ArchInitFPU(Void) {
 	UInt16 cw1 = 0x37A;
 	UIntPtr cr0;
 	UIntPtr cr4;
-#ifndef ARCH_64
 	UIntPtr d;
 	
 	if (!CPUIDCheck()) {																						// Let's check if we can use the CPUID instruction
@@ -54,7 +53,6 @@ Void ArchInitFPU(Void) {
 		DbgWriteFormated("PANIC! SSE isn't avaliable\r\n");														// Nope
 		ArchHalt();																								// Halt
 	}
-#endif
 	
 	Asm Volatile("mov %%cr0, %0" : "=r"(cr0));																	// Read the CR0
 	Asm Volatile("mov %%cr4, %0" : "=r"(cr4));																	// Read the CR4
@@ -75,22 +73,8 @@ Void ArchInitPMM(Void) {
 	PMMInit();																									// Init the PMM
 }
 
-#ifdef ARCH_64
 Void ArchInitVMM(Void) {
-	UIntPtr phys = MmReferencePage(0);																			// Try to alloc a physical page
-	
-	if (phys == 0) {
-		DbgWriteFormated("PANIC! Couldn't init the VMM\r\n");													// Failed...
-		ArchHalt();																								// Halt
-	}
-	
-	MmSetP4(0xFFFF808000000000, phys & PAGE_MASK, 0x03);														// Pre alloc this P4 entry for the kernel heap
-	MmInvlpg((UIntPtr)(&MmGetP4(0xFFFF808000000000)));															// Invalidate the TLB
-	HeapInit(0xFFFF808000000000, 0xFFFF810000000000);															// 512 GiB heap, starts at 0xFFFF808000000000 and ends at 0xFFFF810000000000
-}
-#else
-Void ArchInitVMM(Void) {
-	for (UIntPtr i = 0xC0800000; i < 0xE0800000; i += 0x400000) {												// First, let's pre alloc the page tables for our heap
+	for (UIntPtr i = 0xC0C00000; i < 0xE0C00000; i += 0x400000) {												// First, let's pre alloc the page tables for our heap
 		if ((MmGetPDE(i) & 0x01) != 0x01) {																		// We need to alloc this one?
 			UIntPtr phys = MmReferencePage(0);																	// Yes, try to alloc a new page
 			
@@ -103,9 +87,8 @@ Void ArchInitVMM(Void) {
 		}
 	}
 	
-	HeapInit(0xC0800000, 0xE0800000);																			// 512 MiB heap, starts at 0xC0800000 and ends at 0xE0800000
+	HeapInit(0xC0C00000, 0xE0C00000);																			// 512 MiB heap, starts at 0xC0C00000 and ends at 0xE0C00000
 }
-#endif
 
 Void ArchInitDebug(Void) {
 	SerialInit(COM1_PORT);																						// Init debugging (using COM1 port)

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 31 of 2018, at 18:45 BRT
-// Last edited on January 21 of 2019, at 16:36 BRT
+// Last edited on February 28 of 2019, at 18:43 BRT
 
 #define __CHICAGO_PMM__
 
@@ -53,12 +53,13 @@ UIntPtr PMMCountMemory(Void) {
 Void PMMInit(Void) {
 	MmMaxPages = PMMCountMemory() / MM_PAGE_SIZE;																		// Get memory size based on the memory map entries
 	MmUsedPages = MmMaxPages;																							// We're going to free the avaliable pages later
-	MmPageMap = (PUIntPtr)MmBootAlloc(MmMaxPages / 8, False);															// Alloc the page frame allocator stack using the initial boot allocator
-	MmPageReferences = (PUIntPtr)MmBootAlloc(MmMaxPages * sizeof(UIntPtr), False);										// Also alloc the page frame reference map
+	MmPageMap = (PUIntPtr)MmBootAlloc(0x80000, False);																	// Alloc the page frame allocator stack using the initial boot allocator
+	MmPageReferences = (PUIntPtr)MmBootAlloc(0x400000, False);															// Also alloc the page frame reference map
+	MmMaxIndex = 0x20000;																								// Set the max index for the MmAllocPage function
 	KernelRealEnd = MmBootAllocPointer;																					// Setup the KernelRealEnd variable
 	MmBootAllocPointer = 0;																								// Break/disable the MmBootAlloc, now we should use MemAllocate/AAllocate/Reallocate/ZAllocate/Free/AFree
 	
-	StrSetMemory((PUInt8)MmPageMap, 0xFF, MmMaxPages / 8);																// We're going to free the avaliable pages later
+	StrSetMemory((PUInt8)MmPageMap, 0xFF, 0x80000);																		// We're going to free the avaliable pages later
 	
 	if ((KernelRealEnd % MM_PAGE_SIZE) != 0) {																			// Align the KernelRealEnd variable to page size
 		KernelRealEnd += MM_PAGE_SIZE - (KernelRealEnd % MM_PAGE_SIZE);
