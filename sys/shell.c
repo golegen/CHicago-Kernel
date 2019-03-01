@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on February 24 of 2019, at 16:35 BRT
+// Last edited on March 01 of 2019, at 18:09 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -14,8 +14,130 @@
 #include <chicago/nls.h>
 #include <chicago/panic.h>
 #include <chicago/process.h>
+#include <chicago/rand.h>
 #include <chicago/string.h>
 #include <chicago/version.h>
+
+#define TEST(name) static Int Test ## name(Void)																										// Macros for making and executing the tests
+#define CALL_TEST(name) if (Test ## name()) { pass++; } else { fail++; } tests++;
+
+TEST(Allocator0) {
+	Int *arr = (Int*)MemAllocate(sizeof(Int));																											// Alloc some memory
+	
+	if (arr == Null) {
+		return False;																																	// Failed :(
+	}
+	
+	*arr = 10;																																			// Assign some value
+	
+	Int ret = *arr == 10;																																// Check if the value is ok
+	
+	MemFree((UIntPtr)arr);																																// Free the allocated memory
+	
+	return ret;
+}
+
+TEST(Allocator1) {
+	UIntPtr old = 0;																																	// Let's alloc a lot of small blocks!
+	
+	for (Int i = 0; i < 10000; i++) {
+		UIntPtr addr = MemAllocate(sizeof(Int));																										// Alloc some memory
+		
+		if (addr == 0) {
+			return False;																																// Failed :(
+		}
+		
+		if (old != 0 && (addr != old)) {																												// Check if this one is in the same address of the old one
+			MemFree(addr);																																// Isn't :(
+			return False;
+		} else if (old == 0) {																															// Set the 'old' variable if it isn't set
+			old = addr;
+		}
+		
+		MemFree(addr);																																	// Free the allocated address
+	}
+	
+	return True;
+}
+
+TEST(Allocator2) {
+	Int arr[10000];																																		// Let's test allocating one big block, a lot of small blocks, assigning some values, checking them and after all, free everything
+	Int **arr2 = (Int**)MemAllocate(sizeof(Int*) * 10000);																								// Alloc some memory
+	Int tmp = 0;
+	
+	if (arr2 == Null) {
+		return False;																																	// Failed
+	}
+	
+	for (Int i = 0; i < 10000; i++) {																													// Let's allocate and set the values!
+		tmp = (Int)RandGenerate();																														// Generate some aleatory value
+		arr[i] = tmp;																																	// Assign to our local array
+		arr2[i] = (Int*)MemAllocate(sizeof(Int));																										// Alloc some memory
+		
+		if (arr2[i] == Null) {																															// Failed?
+			for (Int j = 0; j < i; j++) {																												// Yes, free all the small block that we allocated
+				MemFree((UIntPtr)arr2[j]);
+			}
+			
+			MemFree((UIntPtr)arr2);																														// And the big block
+			
+			return False;
+		}
+		
+		*(arr2[i]) = tmp;																																// Now, just assign the value!
+	}
+	
+	for (Int i = 0; i < 10000; i++) {																													// Now let's check everything!
+		if (*(arr2[i]) != arr[i]) {																														// Same value?
+			for (Int j = i; j < 10000; j++) {																											// Nope, let's free everything :(
+				MemFree((UIntPtr)arr2[j]);
+			}
+			
+			MemFree((UIntPtr)arr2);
+			
+			return False;
+		}
+		
+		MemFree((UIntPtr)arr2[i]);																														// Ok, so let's free this block!
+	}
+	
+	MemFree((UIntPtr)arr2);																																// Free the big block
+	
+	return True;
+}
+
+TEST(Allocator3) {
+	Int **arr = (Int**)MemAllocate(sizeof(Int*) * 3000000);																								// Alloc one very big block
+	
+	if (arr == Null) {
+		return False;																																	// Failed ;(
+	}
+	
+	for (Int i = 0; i < 10000; i++) {																													// Now a lot of small block (just like the Allocator2 test)
+		arr[i] = (Int*)MemAllocate(sizeof(Int));
+		
+		if (arr[i] == Null) {
+			for (Int j = 0; j < i; j++) {																												// Failed, free everything :(
+				MemFree((UIntPtr)arr[j]);
+			}
+			
+			MemFree((UIntPtr)arr);
+			
+			return False;
+		}
+	}
+	
+	for (Int i = 0; i < 10000; i++) {																													// Now, let's free everything
+		MemFree((UIntPtr)arr[i]);
+	}
+	
+	MemFree((UIntPtr)arr);																																// Including our 'arr'
+	
+	UIntPtr new = MemAllocate(50000);																													// Allocate another big block
+	MemFree(new);																																		// And free it
+	
+	return new == (UIntPtr)arr;																															// Return if the address of the new block was in the address of the old one
+}
 
 static UIntPtr BVal(UIntPtr bytes) {
 	if (bytes < 1024) {																																	// Less than 1KB?
@@ -86,6 +208,8 @@ static Boolean ToIPv4(PWChar in, PUInt8 out) {
 }
 
 static Void ShellMain(Void) {
+	RandSetSeed(RandGenerateSeed());																													// Init our "random" number generator
+	
 	PWChar cmd = (PWChar)MemAllocate(1024);																												// Alloc memory for reading the keyboard
 	PWChar *argv = (PWChar*)MemAllocate(sizeof(PWChar) * 256);																							// Alloc memory for transforming the cmd into argc/argv
 	PWChar cwd = StrDuplicate(L"\\");																													// And alloc memory for our cwd (current working directory)
@@ -456,6 +580,17 @@ static Void ShellMain(Void) {
 			
 			NetSetDefaultDevice(dev);																													// Set the default device!
 			ConWriteFormated(L"\r\n");
+		} else if (StrGetLength(argv[0]) == 4 && StrCompare(argv[0], L"test")) {																		// Test the system
+			UIntPtr tests = 0;
+			UIntPtr pass = 0;
+			UIntPtr fail = 0;
+			
+			CALL_TEST(Allocator0);																														// Run all the tests!
+			CALL_TEST(Allocator1);
+			CALL_TEST(Allocator2);
+			CALL_TEST(Allocator3);
+			
+			ConWriteFormated(NlsGetMessage(NLS_SHELL_TEST_SUMMARY), tests, pass, fail);																	// Now print the summary
 		} else if (StrGetLength(argv[0]) == 3 && StrCompare(argv[0], L"ver")) {																			// Print the system version
 			ConSetRefresh(False);																														// Disable screen refresh
 			ConWriteFormated(NlsGetMessage(NLS_OS_NAME), CHICAGO_ARCH);																					// Print some system informations

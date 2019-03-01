@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:27 BRT
-// Last edited on January 21 of 2019, at 23:04 BRT
+// Last edited on March 01 of 2019, at 17:59 BRT
 
 #include <chicago/types.h>
 
@@ -40,6 +40,7 @@ PWChar NlsMessagesEn[] = {
 	L"ps     - List all the processes\r\n"
 	L"setip  - Set the IPv4 address of a network device\r\n"
 	L"setnet - Set the default network device\r\n"
+	L"test   - Test the system\r\n"
 	L"ver    - Print the system version\r\n\r\n",
 	
 	L"Available languages: %s\r\n\r\n",
@@ -67,6 +68,8 @@ PWChar NlsMessagesEn[] = {
 	L"Usage: %s [device]\r\n\r\n",
 	
 	L"Default network device isn't set\r\n\r\n",
+	
+	L"Number of tests: %d\r\nOK: %d\r\nFail: %d\r\n\r\n",
 	
 	L"Invalid command: '%s'\r\n\r\n"
 };

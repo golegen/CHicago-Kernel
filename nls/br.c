@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 09 of 2018, at 19:27 BRT
-// Last edited on January 21 of 2019, at 23:04 BRT
+// Last edited on March 01 of 2019, at 17:59 BRT
 
 #include <chicago/types.h>
 
@@ -40,6 +40,7 @@ PWChar NlsMessagesBr[] = {
 	L"ps     - Mostra todos os processos\r\n"
 	L"setip  - Altera o endereço IPv4 de um dispositivo de rede\r\n"
 	L"setnet - Altera o dispositivo de rede padrão\r\n"
+	L"test   - Testa o sistema\r\n"
 	L"ver    - Mostra a versão do sistema\r\n\r\n",
 	
 	L"Idiomas disponíveis: %s\r\n\r\n",
@@ -67,6 +68,8 @@ PWChar NlsMessagesBr[] = {
 	L"Uso: %s [dispositivo]\r\n\r\n",
 	
 	L"Dispositivo de rede padrão não foi definido\r\n\r\n",
+	
+	L"Quantidade de testes: %d\r\nOK: %d\r\nFalhou: %d\r\n\r\n",
 	
 	L"Comando inválido: '%s'\r\n\r\n"
 };
