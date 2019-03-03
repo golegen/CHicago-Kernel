@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 26 of 2018, at 22:00 BRT
-// Last edited on February 22 of 2019, at 21:28 BRT
+// Last edited on March 01 of 2019, at 20:10 BRT
 
 #include <chicago/arch/idt-int.h>
 #include <chicago/arch/port.h>
@@ -76,22 +76,27 @@ Void ISRDefaultHandler(PRegisters regs) {
 			
 			if ((MmGetPDE(faddr) & 0x01) != 0x01) {													// Present?
 				DbgWriteFormated("PANIC! Page fault at address 0x%x\r\n", faddr);					// No
+				DbgWriteFormated("       EIP: 0x%x\r\n", regs->eip);
 				ArchPanic(PANIC_MM_READWRITE_TO_NONPRESENT_AREA, regs);
 			} else if ((MmGetPTE(faddr) & 0x01) != 0x01) {											// Same as above
 				DbgWriteFormated("PANIC! Page fault at address 0x%x\r\n", faddr);
+				DbgWriteFormated("       EIP: 0x%x\r\n", regs->eip);
 				ArchPanic(PANIC_MM_READWRITE_TO_NONPRESENT_AREA, regs);
 			}
 			
 			DbgWriteFormated("PANIC! Page fault at address 0x%x\r\n", faddr);						// Write fault?
+			DbgWriteFormated("       EIP: 0x%x\r\n", regs->eip);
 			ArchPanic(PANIC_MM_WRITE_TO_READONLY_AREA, regs);										// Yes
 		} else {
 			DbgWriteFormated("PANIC! %s exception\r\n", ExceptionStrings[regs->int_num]);			// No
+			DbgWriteFormated("       EIP: 0x%x\r\n", regs->eip);
 			ArchPanic(PANIC_KERNEL_UNEXPECTED_ERROR, regs);
 		}
 	} else if (InterruptHandlers[regs->int_num] != Null) {											// No, we have an handler?
 		InterruptHandlers[regs->int_num](regs);														// Yes!
 	} else {
 		DbgWriteFormated("PANIC! Unhandled interrupt 0x%x\r\n", regs->int_num);						// No
+		DbgWriteFormated("       EIP: 0x%x\r\n", regs->eip);
 		ArchPanic(PANIC_KERNEL_UNEXPECTED_ERROR, regs);
 	}
 }

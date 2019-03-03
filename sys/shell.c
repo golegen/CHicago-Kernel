@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on December 08 of 2018, at 10:28 BRT
-// Last edited on March 01 of 2019, at 18:09 BRT
+// Last edited on March 03 of 2019, at 10:09 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/arch.h>
@@ -47,7 +47,7 @@ TEST(Allocator1) {
 			return False;																																// Failed :(
 		}
 		
-		if (old != 0 && (addr != old)) {																												// Check if this one is in the same address of the old one
+		if (old != 0 && (addr > old)) {																													// Check if this one is in the same address of the old one
 			MemFree(addr);																																// Isn't :(
 			return False;
 		} else if (old == 0) {																															// Set the 'old' variable if it isn't set
@@ -136,7 +136,7 @@ TEST(Allocator3) {
 	UIntPtr new = MemAllocate(50000);																													// Allocate another big block
 	MemFree(new);																																		// And free it
 	
-	return new == (UIntPtr)arr;																															// Return if the address of the new block was in the address of the old one
+	return new <= (UIntPtr)arr;																															// Return if the address of the new block was in the address of the old one
 }
 
 static UIntPtr BVal(UIntPtr bytes) {
