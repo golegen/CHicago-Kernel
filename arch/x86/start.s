@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:21 BRT
-// Last edited on February 28 of 2019, at 18:33 BRT
+// Last edited on March 03 of 2019, at 11:11 BRT
 
 .section .text
 
@@ -556,6 +556,6 @@ KernelPageTable3:
 .skip 4096
 
 .align 16
-.skip 8192																												// 8 KiB for kernel stack
+.skip 65536																												// 64 KiB for kernel stack
 .global KernelStack
 KernelStack:
