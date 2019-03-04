@@ -1,7 +1,7 @@
 # File author is Ítalo Lima Marconato Matias
 #
 # Created on May 11 of 2018, at 13:14 BRT
-# Last edited on January 23 of 2019, at 14:46 BRT
+# Last edited on March 03 of 2019, at 09:55 BRT
 
 ARCH ?= x86
 VERBOSE ?= false
@@ -55,8 +55,10 @@ LINKER_SCRIPT := arch/$(ARCH)/$(LINKER_SCRIPT)
 
 ifeq ($(SUBARCH),)
 	KERNEL := build/chkrnl-$(ARCH)
+	MAP_FILE := build/chkrnl-$(ARCH).map
 else
 	KERNEL := build/chkrnl-$(ARCH)_$(SUBARCH)
+	MAP_FILE := build/chkrnl-$(ARCH)_$(SUBARCH).map
 endif
 
 ifneq ($(VERBOSE),true)
@@ -88,7 +90,7 @@ ifeq ($(UNSUPPORTED_ARCH),true)
 endif
 	$(NOECHO)echo Linking $@
 	$(NOECHO)if [ ! -d $(dir $@) ]; then mkdir -p $(dir $@); fi
-	$(NOECHO)$(TARGET)-gcc -T$(LINKER_SCRIPT) -ffreestanding -nostdlib -o $@ $(ARCH_OBJECTS) $(OBJECTS) $(OTHER_OBJECTS) $(ARCH_LDFLAGS) -lgcc
+	$(NOECHO)$(TARGET)-gcc -T$(LINKER_SCRIPT) -ffreestanding -nostdlib -Xlinker -Map=$(MAP_FILE) -o $@ $(ARCH_OBJECTS) $(OBJECTS) $(OTHER_OBJECTS) $(ARCH_LDFLAGS) -lgcc
 
 build/$(ARCH)_$(SUBARCH)/%.oo: %
 ifeq ($(UNSUPPORTED_ARCH),true)
