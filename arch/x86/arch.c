@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:21 BRT
-// Last edited on February 28 of 2019, at 18:44 BRT
+// Last edited on March 05 of 2019, at 11:36 BRT
 
 #include <chicago/arch/ahci.h>
 #include <chicago/arch/bootmgr.h>
@@ -37,6 +37,7 @@ Void ArchInitFPU(Void) {
 	UInt16 cw1 = 0x37A;
 	UIntPtr cr0;
 	UIntPtr cr4;
+	UIntPtr c;
 	UIntPtr d;
 	
 	if (!CPUIDCheck()) {																						// Let's check if we can use the CPUID instruction
@@ -44,12 +45,12 @@ Void ArchInitFPU(Void) {
 		ArchHalt();																								// Halt
 	}
 	
-	Asm Volatile("cpuid" : "=d"(d) : "a"(1) : "ecx", "ebx");													// EAX = 1, Get features
+	Asm Volatile("cpuid" : "=c"(c), "=d"(d) : "a"(1) : "ebx");													// EAX = 1, Get features
 	
 	if (!(d & (1 << 0))) {																						// FPU avaliable?
 		DbgWriteFormated("PANIC! FPU isn't avaliable\r\n");														// Nope
 		ArchHalt();																								// Halt
-	} else if (!(d & (1 << 26))) {																				// SSE(2) avaliable?
+	} else if (!(c & (1 << 20))) {																				// SSE(4.2) avaliable?
 		DbgWriteFormated("PANIC! SSE isn't avaliable\r\n");														// Nope
 		ArchHalt();																								// Halt
 	}

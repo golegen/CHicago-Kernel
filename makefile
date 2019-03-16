@@ -1,7 +1,7 @@
 # File author is Ítalo Lima Marconato Matias
 #
 # Created on May 11 of 2018, at 13:14 BRT
-# Last edited on March 03 of 2019, at 09:55 BRT
+# Last edited on March 05 of 2019, at 11:36 BRT
 
 ARCH ?= x86
 VERBOSE ?= false
@@ -12,7 +12,7 @@ SHELL := env PATH=$(PATH) /bin/bash
 
 ifeq ($(ARCH),x86)
 	TARGET ?= i686-elf
-	ARCH_CFLAGS := -DCHEXEC_ARCH=CHEXEC_HEADER_FLAGS_ARCH_X86 -msse2
+	ARCH_CFLAGS := -DCHEXEC_ARCH=CHEXEC_HEADER_FLAGS_ARCH_X86 -msse4.2
 	
 	ARCH_OBJECTS := start.s.o
 	ARCH_OBJECTS += arch.c.o

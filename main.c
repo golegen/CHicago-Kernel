@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on February 28 of 2019, at 19:01 BRT
+// Last edited on March 15 of 2019, at 22:20 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -14,6 +14,7 @@
 #include <chicago/nls.h>
 #include <chicago/panic.h>
 #include <chicago/shell.h>
+#include <chicago/timer.h>
 #include <chicago/version.h>
 
 Void KernelMain(Void) {
@@ -65,6 +66,7 @@ Void KernelMain(Void) {
 Void KernelMainLate(Void) {
 	DispIncrementProgessBar();
 	DbgWriteFormated("[Kernel] Tasking initialized\r\n");																	// Tasking initialized
+	TimerSleep(500);																										// Wait 500ms, so the user can see our bootscreen (why not?)
 	
 	IpcInit();																												// Init the IPC interface
 	DispIncrementProgessBar();
@@ -74,6 +76,7 @@ Void KernelMainLate(Void) {
 	NetFinish();																											// And start handling the network packets
 	DispFillProgressBar();																									// Kernel initialized
 	DbgWriteFormated("[Kernel] Kernel initialized\r\n\r\n");
+	TimerSleep(500);																										// Wait 500ms, so the user can see our bootscreen (why not?)
 	
 	ConClearScreen();																										// Clear the screen
 	ConWriteFormated(NlsGetMessage(NLS_OS_NAME), CHICAGO_ARCH);																// Print some system informations
