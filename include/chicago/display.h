@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 18 of 2018, at 21:17 BRT
-// Last edited on December 09 of 2018, at 16:35 BRT
+// Last edited on April 15 of 2019, at 22:26 BRT
 
 #ifndef __CHICAGO_DISPLAY_H__
 #define __CHICAGO_DISPLAY_H__
@@ -11,6 +11,10 @@
 #define DispBootSplashImage (&_binary_splash_bmp_start)
 #define DispFontStart (&_binary_font_psf_start)
 #define DispFontEnd (&_binary_font_psf_end)
+
+#define DISP_MODE_COPY 0x01
+#define DISP_MODE_BLEND 0x02
+#define DISP_MODE_INVERT 0x04
 
 typedef struct {
 	UInt8 b;
@@ -58,12 +62,14 @@ Void DispExtractARGB(UIntPtr c, PUInt8 a, PUInt8 r, PUInt8 g, PUInt8 b);
 Void DispRefresh(Void);
 Void DispClearScreen(UIntPtr c);
 Void DispScrollScreen(UIntPtr c);
+UIntPtr DispGetPixel(UIntPtr x, UIntPtr y);
 Void DispPutPixel(UIntPtr x, UIntPtr y, UIntPtr c);
 Void DispDrawLine(UIntPtr x0, UIntPtr y0, UIntPtr x1, UIntPtr y1, UIntPtr c);
 Void DispDrawRectangle(UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UIntPtr c);
 Void DispFillRectangle(UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UIntPtr c);
 Void DispDrawRoundedRectangle(UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UIntPtr r, UIntPtr c);
 Void DispFillRoundedRectangle(UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UIntPtr r, UIntPtr c);
+Void DispCopy(UIntPtr src, UInt8 srcbpp, UIntPtr srcx, UIntPtr srcy, UIntPtr srcw, UIntPtr srch, UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UInt8 mode);
 Void DispDrawBitmap(PUInt8 bmp, UIntPtr x, UIntPtr y);
 Void DispWriteFormated(UIntPtr x, UIntPtr y, UIntPtr bg, UIntPtr fg, Const PWChar data, ...);
 Void DispIncrementProgessBar(Void);

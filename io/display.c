@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 18 of 2018, at 21:12 BRT
-// Last edited on January 23 of 2019, at 13:45 BRT
+// Last edited on April 15 of 2019, at 22:39 BRT
 
 #define __CHICAGO_DISPLAY__
 
@@ -99,6 +99,39 @@ Void DispScrollScreen(UIntPtr c) {
 		StrCopyMemory32((PUInt32)DispBackBuffer, (PUInt32)(DispBackBuffer + (lsz * 4)), DispWidth * DispHeight - lsz);
 		StrSetMemory32((PUInt32)(DispBackBuffer + (DispWidth * DispHeight * 4) - (lsz * 4)), c, lsz);
 	}
+}
+
+UIntPtr DispGetPixel(UIntPtr x, UIntPtr y) {
+	if (x >= DispWidth) {																										// Fix the x and the y if they are bigger than the screen dimensions
+		x = DispWidth - 1;
+	}
+	
+	if (y >= DispHeight) {
+		y = DispHeight - 1;
+	}
+	
+	UIntPtr c = 0;
+	
+	if (DispBytesPerPixel == 3) {																								// Get the pixel!
+		c = *((PUInt16)(DispBackBuffer + (y * (DispWidth * 3)) + (x * 3)));
+		*((PUInt8)(((UIntPtr)&c) + 2)) = *((PUInt8)(DispBackBuffer + (y * (DispWidth * 3)) + (x * 3) + 2));
+	} else if (DispBytesPerPixel == 4) {
+		c = *((PUInt32)(DispBackBuffer + (y * (DispWidth * 4)) + (x * 4)));
+	}
+	
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	UInt8 a;																													// Big endian...
+	UInt8 a;
+	UInt8 r;
+	UInt8 g;
+	UInt8 b;
+	
+	DispExtractARGB(c, &a, &r, &g, &b);																							// Extract the ARGB values
+	
+	c = a | (r << 8) | (g << 16) | (b << 24);																					// Convert to big endian
+#endif
+	
+	return c;
 }
 
 Void DispPutPixel(UIntPtr x, UIntPtr y, UIntPtr c) {
@@ -348,22 +381,136 @@ Void DispFillRoundedRectangle(UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UIntPt
 	DispDrawLine(x + w, y + r, x + w, y + h - r, c);																			// And the right one
 }
 
-Void DispDrawBitmap(PUInt8 bmp, UIntPtr x, UIntPtr y) {
-	PBmpHeader hdr = (PBmpHeader)bmp;																							// BMP file header
-	PBmpInfoHeader ihdr = (PBmpInfoHeader)(((UIntPtr)bmp) + sizeof(BmpHeader));													// BMP info header
-	PUInt8 bytes = (PUInt8)(((UIntPtr)bmp) + hdr->off);																			// The image itself
+static UIntPtr DispBlend(UIntPtr a, UIntPtr b) {
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+	UInt8 a1;																													// Big endian...
+	UInt8 r1;
+	UInt8 g1;
+	UInt8 b1;
 	
-	for (UIntPtr i = 0; i < ihdr->height; i++) {																				// Let's do it!
-		PUInt8 row = bytes + i * ihdr->width * 3;																				// Get this row
+	DispExtractARGB(a, &a1, &r1, &g1, &b1);																						// Extract the ARGB values for the A value
+	a = a1 | (r1 << 8) | (g1 << 16) | (b1 << 24);																				// Convert to little endian
+	
+	DispExtractARGB(b, &a1, &r1, &g1, &b1);																						// Extract the ARGB values for the B value
+	b = a1 | (r1 << 8) | (g1 << 16) | (b1 << 24);																				// Convert to little endian
+#endif
+	
+	UIntPtr ba = (b >> 24) & 0xFF;																								// Extract the alpha value from the B val
+	
+	if (ba == 0) {																												// Transparent?
+		return a;																												// Yes, just return the A val
+	}
+	
+	UIntPtr rb = (((b & 0xFF00FF) * ba) + ((a & 0xFF00FF) * (0xFF - ba))) & 0xFF00FF00;											// Extract and blend the red and blue (0xFF00FF)
+	UIntPtr g = (((b & 0xFF00) * ba) + ((a & 0xFF00) * (0xFF - ba))) & 0xFF0000;												// Extract and blend the green (0xFF0000)
+	
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    UIntPtr c = (b & 0xFF000000) | ((rb | g) >> 8);																				// Big endian... prepare the result (in little endian)
+	
+	DispExtractARGB(c, &a1, &r1, &g1, &b1);																						// Extract the ARGB value
+	c = a1 | (r1 << 8) | (g1 << 16) | (b1 << 24);																				// Convert to big endian
+	
+	return c;																													// And return
+#else
+	return (b & 0xFF000000) | ((rb | g) >> 8);																					// Return the blended color
+#endif
+}
+
+Void DispCopy(UIntPtr src, UInt8 srcbpp, UIntPtr srcx, UIntPtr srcy, UIntPtr srcw, UIntPtr srch, UIntPtr x, UIntPtr y, UIntPtr w, UIntPtr h, UInt8 mode) {
+	if (((mode & DISP_MODE_COPY) != DISP_MODE_COPY) && ((mode & DISP_MODE_BLEND) != DISP_MODE_BLEND)) {							// Invalid mode?
+		return;																													// Yes :(
+	} else if (src == 0) {																										// src == framebuffer?
+		src = DispBackBuffer;																									// Yes :)
+		srcbpp = DispBytesPerPixel;
+		srcw = DispWidth;
+		srch = DispHeight;
+	} else if (srcbpp == 0) {																									// Invalid bpp?
+		return;																													// Yes :(
+	}
+	
+	if (srcx >= srcw) {																											// Fix the srcx and the srcy if they are bigger than the bitmap dimensions
+		srcx = srcw - 1;
+	}
+	
+	if (srcy >= srch) {
+		srcy = srch - 1;
+	}
+	
+	if ((srcx + w) > srcw) {																									// Fix the width and height if they are bigger than the bitmap dimensions
+		w = srcw - srcx;
+	}
+	
+	if ((srcy + h) > srch) {
+		h = srch - srcy;
+	}
+	
+	if (x >= DispWidth) {																										// Fix the x and the y if they are bigger than the screen dimensions
+		x = DispWidth - 1;
+	}
+	
+	if (y >= DispHeight) {
+		y = DispHeight - 1;
+	}
+	
+	if ((x + w) > DispWidth) {																									// Fix the width and height if they are bigger than the screen dimensions
+		w = DispWidth - x;
+	}
+	
+	if ((y + h) > DispHeight) {
+		h = DispHeight - y;
+	}
+	
+	PUInt8 srcb = (PUInt8)(src + (srcy * srcw * srcbpp) + (srcx * srcbpp));
+	PUInt8 dstb = (PUInt8)(DispBackBuffer + (y * DispWidth * DispBytesPerPixel) + (x * DispBytesPerPixel));
+	
+	if ((srcbpp == DispBytesPerPixel) && ((mode & DISP_MODE_COPY) == DISP_MODE_COPY)) {											// Same BPP and mode is DISP_MODE_COPY?
+		Boolean invert = (mode & DISP_MODE_INVERT) == DISP_MODE_INVERT;															// Yes, first let's see if we need to copy the lines in the reverse order
 		
-		for (UIntPtr j = 0, k = 0; k < ihdr->width; k++) {																		// Let's draw all the pixels
-			UInt8 b = row[j++] & 0xFF;
-			UInt8 g = row[j++] & 0xFF;
-			UInt8 r = row[j++] & 0xFF;
+		for (UIntPtr ys = invert ? h + 1 : 0, yd = 0; invert ? ys != 0 : ys < h; invert ? ys-- : ys++, yd++) {				// Now, let's copy them!			
+			StrCopyMemory(&dstb[yd * DispWidth * srcbpp], &srcb[ys * srcw * srcbpp], w * srcbpp);
+		}
+	} else if ((mode & DISP_MODE_COPY) == DISP_MODE_COPY) {																		// mode is DISP_MODE_COPY?
+		Boolean invert = (mode & DISP_MODE_INVERT) == DISP_MODE_INVERT;															// Yes, first let's see if we need to copy the lines in the reverse order
+		
+		for (UIntPtr ys = invert ? h + 1 : 0, yd = 0; invert ? ys != 0 : ys < h; invert ? ys-- : ys++, yd++) {				// Now, let's copy them!
+			PUInt8 row = &srcb[ys * srcw * srcbpp];
 			
-			DispPutPixel(x + k, y + (ihdr->height - (i + 1)), (((r << 16) | (g << 8) | b) & 0xFFFFFF) | 0xFF000000);			// Convert the R, B and G to the A8R8G8B8 format and ALWAYS REMEMBER THAT IN BMP THE 0, 0 IS AT THE BOTTOM LEFT, AND OUR 0, 0 IS AT TOP LEFT
+			for (UIntPtr xx = 0; xx < w; xx++) {
+				if (srcbpp == 3) {
+					DispPutPixel(x + xx, y + yd, ((row[xx * 3 + 2] << 16) | (row[xx * 3 + 1] << 8) | row[xx * 3]) | 0xFF000000);
+				} else if (srcbpp == 4) {
+					DispPutPixel(x + xx, y + yd, *((PUInt32)(row + xx * 4)));
+				}
+			}
+		}
+	} else {																													// mode should be DISP_MODE_BLEND
+		Boolean invert = (mode & DISP_MODE_INVERT) == DISP_MODE_INVERT;															// Yes, first let's see if we need to copy the lines in the reverse order
+		
+		for (UIntPtr ys = invert ? srch + 1 : 0, yd = 0; invert ? ys != 0 : ys < h; invert ? ys-- : ys++, yd++) {				// Now, let's copy them!
+			PUInt8 row = &srcb[ys * srcw * srcbpp];
+			
+			for (UIntPtr xx = 0; xx < w; xx++) {
+				UIntPtr a = DispGetPixel(x + xx, y + yd);																		// Get the A pixel
+				UIntPtr b = 0;																									// Get the B pixel
+				
+				if (srcbpp == 3) {
+					b = ((row[xx * 3 + 2] << 16) | (row[xx * 3 + 1] << 8) | row[xx * 3]) | 0xFF000000;
+				} else if (srcbpp == 4) {
+					b = *((PUInt32)(row + xx * 4));
+				}
+				
+				DispPutPixel(x + xx, y + yd, DispBlend(a, b));																	// Alpha blend the colors and put the pixel
+			}
 		}
 	}
+}
+
+Void DispDrawBitmap(PUInt8 bmp, UIntPtr x, UIntPtr y) {
+	PBmpHeader hdr = (PBmpHeader)bmp;																							// Get the BMP file header
+	PBmpInfoHeader ihdr = (PBmpInfoHeader)(((UIntPtr)bmp) + sizeof(BmpHeader));													// The BMP info header
+	UIntPtr src = ((UIntPtr)bmp) + hdr->off;																					// And the image itself
+	
+	DispCopy(src, 3, 0, 0, ihdr->width, ihdr->height, x, y, ihdr->width, ihdr->height, DISP_MODE_COPY | DISP_MODE_INVERT);		// Now just use the DispCopy function
 }
 
 static Void DispWriteFormatedCharacter(PUIntPtr x, PUIntPtr y, UIntPtr bg, UIntPtr fg, WChar data) {
