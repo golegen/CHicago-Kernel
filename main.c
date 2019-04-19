@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on March 15 of 2019, at 22:20 BRT
+// Last edited on April 19 of 2019, at 13:21 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -78,6 +78,7 @@ Void KernelMainLate(Void) {
 	DbgWriteFormated("[Kernel] Kernel initialized\r\n\r\n");
 	TimerSleep(500);																										// Wait 500ms, so the user can see our bootscreen (why not?)
 	
+	ConSetSurface(DispBackBuffer, 0, 0);																					// Init the console
 	ConClearScreen();																										// Clear the screen
 	ConWriteFormated(NlsGetMessage(NLS_OS_NAME), CHICAGO_ARCH);																// Print some system informations
 	ConWriteFormated(NlsGetMessage(NLS_OS_CODENAME), CHICAGO_CODENAME);

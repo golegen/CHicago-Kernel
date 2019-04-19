@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on April 19 of 2019, at 11:36 BRT
+// Last edited on April 19 of 2019, at 13:16 BRT
 
 #include <chicago/display.h>
 #include <chicago/process.h>
@@ -10,6 +10,9 @@
 Lock ConLock = { False, Null };
 UIntPtr ConCursorX = 0;
 UIntPtr ConCursorY = 0;
+UIntPtr ConSurfaceX = 0;
+UIntPtr ConSurfaceY = 0;
+PImage ConSurface = Null;
 Boolean ConRefresh = True;
 Boolean ConCursorEnabled = True;
 UIntPtr ConBackColor = 0xFF000000;
@@ -22,6 +25,20 @@ Void ConAcquireLock(Void) {
 	ConCursorEnabled = True;
 	ConBackColor = 0xFF000000;
 	ConForeColor = 0xFFAAAAAA;
+}
+
+Void ConSetSurface(PImage img, UIntPtr x, UIntPtr y) {
+	PsLock(&ConLock);																												// Lock
+	
+	ConSurface = img;																												// Set the surface
+	ConSurfaceX = x;
+	ConSurfaceY = y;
+	ConRefresh = True;																												// And reset the console attributes
+	ConCursorEnabled = True;
+	ConBackColor = 0xFF000000;
+	ConForeColor = 0xFFAAAAAA;
+	
+	PsUnlock(&ConLock);																												// Unlock
 }
 
 Void ConSetRefresh(Boolean s) {
@@ -41,9 +58,9 @@ Void ConSetCursorEnabled(Boolean e) {
 	PsLock(&ConLock);																												// Lock
 	
 	if (e && !ConCursorEnabled) {																									// Draw the new cursor?
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);													// Yes
+		ImgFillRectangle(ConSurface, ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);											// Yes
 	} else if (!e && ConCursorEnabled) {																							// Erase the old cursor?
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);													// Yes
+		ImgFillRectangle(ConSurface, ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);											// Yes
 	}
 	
 	ConCursorEnabled = e;																											// Set the cursor enabled prop
@@ -152,35 +169,37 @@ UIntPtr ConGetCursorY(Void) {
 	return y;																														// Return it
 }
 
+static Void ConRefreshScreen(Void) {
+	if (!ConRefresh) {																												// Check if we should refresh
+		return;
+	} else if (ConSurface != DispBackBuffer) {																						// Our surface is the backbuffer?
+		DispBitBlit(ConSurface, 0, 0, ConSurfaceX, ConSurfaceY, ConSurface->width, ConSurface->height, BITBLIT_MODE_COPY);			// Nope, copy it to the backbuffer
+	}
+	
+	DispRefresh();																													// Refresh the screen (copy the backbuffer to the front buffer)
+}
+
 Void ConClearScreen(Void) {
 	PsLock(&ConLock);																												// Lock
-	DispClearScreen(ConBackColor);																									// Clear the screen
+	ImgClear(ConSurface, ConBackColor);																								// Clear the screen
 	ConCursorX = ConCursorY = 0;																									// Move the cursor to 0, 0
 	
 	if (ConCursorEnabled) {																											// Draw the cursor?
-		DispFillRectangle(0, 0, 8, 16, ConForeColor);																				// Yes
+		ImgFillRectangle(ConSurface, 0, 0, 8, 16, ConForeColor);																	// Yes
 	}
 	
-	if (ConRefresh) {
-		DispRefresh();																												// Refresh the screen
-	}
-	
+	ConRefreshScreen();																												// Refresh the screen
 	PsUnlock(&ConLock);																												// Unlock
 }
 
 static Void ConWriteCharacterInt(WChar data, Boolean cursor) {
-	ImgWriteCharacter(DispBackBuffer, cursor, &ConCursorX, &ConCursorY, ConBackColor, ConForeColor, data);							// Redirect to ImgWriteCharacter
+	ImgWriteCharacter(ConSurface, cursor, &ConCursorX, &ConCursorY, ConBackColor, ConForeColor, data);								// Redirect to ImgWriteCharacter
 }
 
 Void ConWriteCharacter(WChar data) {
 	PsLock(&ConLock);																												// Lock
-	
 	ConWriteCharacterInt(data, ConCursorEnabled);																					// Write the character
-	
-	if (ConRefresh) {
-		DispRefresh();																												// Refresh the screen
-	}
-	
+	ConRefreshScreen();																												// Refresh the screen
 	PsUnlock(&ConLock);																												// Unlock
 }
 
@@ -189,34 +208,24 @@ static Void ConWriteStringInt(PWChar data, Boolean cursor) {
 		return;
 	}
 	
-	ImgWriteString(DispBackBuffer, cursor, &ConCursorX, &ConCursorY, ConBackColor, ConForeColor, data);								// Redirect to ImgWriteString
+	ImgWriteString(ConSurface, cursor, &ConCursorX, &ConCursorY, ConBackColor, ConForeColor, data);									// Redirect to ImgWriteString
 }
 
 Void ConWriteString(PWChar data) {
 	PsLock(&ConLock);																												// Lock
-	
 	ConWriteStringInt(data, ConCursorEnabled);																						// Write the string
-	
-	if (ConRefresh) {
-		DispRefresh();																												// Refresh the screen
-	}
-	
+	ConRefreshScreen();																												// Refresh the screen
 	PsUnlock(&ConLock);																												// Unlock
 }
 
 static Void ConWriteIntegerInt(UIntPtr data, UInt8 base, Boolean cursor) {
-	ImgWriteInteger(DispBackBuffer, cursor, &ConCursorX, &ConCursorY, ConBackColor, ConForeColor, data, base);						// Redirect to ImgWriteIntegerr
+	ImgWriteInteger(ConSurface, cursor, &ConCursorX, &ConCursorY, ConBackColor, ConForeColor, data, base);							// Redirect to ImgWriteIntegerr
 }
 
 Void ConWriteInteger(UIntPtr data, UInt8 base) {
 	PsLock(&ConLock);																												// Lock
-	
 	ConWriteIntegerInt(data, base, ConCursorEnabled);																				// Write the integer
-	
-	if (ConRefresh) {
-		DispRefresh();																												// Refresh the screen
-	}
-	
+	ConRefreshScreen();																												// Refresh the screen
 	PsUnlock(&ConLock);																												// Unlock
 }
 
@@ -228,7 +237,7 @@ Void ConWriteFormated(PWChar data, ...) {
 	PsLock(&ConLock);																												// Lock
 	
 	if (ConCursorEnabled) {																											// Erase the old cursor?
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);													// Yes
+		ImgFillRectangle(ConSurface, ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);											// Yes
 	}
 	
 	VariadicList va;
@@ -282,12 +291,9 @@ Void ConWriteFormated(PWChar data, ...) {
 	VariadicEnd(va);
 	
 	if (ConCursorEnabled) {																											// Draw the new cursor?
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);													// Yes
+		ImgFillRectangle(ConSurface, ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);											// Yes
 	}
 	
-	if (ConRefresh) {
-		DispRefresh();																												// Refresh the screen
-	}
-	
+	ConRefreshScreen();																												// Refresh the screen
 	PsUnlock(&ConLock);																												// Unlock
 }
