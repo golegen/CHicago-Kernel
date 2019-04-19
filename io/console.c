@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on March 01 of 2019, at 11:12 BRT
+// Last edited on April 19 of 2019, at 11:36 BRT
 
 #include <chicago/display.h>
 #include <chicago/process.h>
@@ -168,76 +168,14 @@ Void ConClearScreen(Void) {
 	PsUnlock(&ConLock);																												// Unlock
 }
 
-static Void ConWriteCharacterInt(WChar data) {
-	switch (data) {
-	case '\b': {																													// Backspace
-		if (ConCursorX > 0) {																										// We have any more characters to delete in this line?
-			ConCursorX--;																											// Yes
-		} else if (ConCursorY > 0) {																								// We have any more lines?																										
-			ConCursorY--;																											// Yes
-			ConCursorX = DispGetWidth() / 8 - 1;
-		}
-		
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);
-		
-		break;
-	}
-	case '\n': {																													// Line feed
-		ConCursorY++;
-		break;
-	}
-	case '\r': {																													// Carriage return
-		ConCursorX = 0;
-		break;
-	}
-	case '\t': {																													// Tab
-		ConCursorX = (ConCursorX + 4) & ~3;
-		break;
-	}
-	default: {																														// Character
-		PPCScreenFont font = (PPCScreenFont)DispFontStart;
-		PUInt8 glyph = (PUInt8)(DispFontStart + font->hdr_size + (data * font->bytes_per_glyph));
-		
-		for (UIntPtr i = 0; i < 16; i++) {
-			UIntPtr mask = 1 << 7;
-			
-			for (UIntPtr j = 0; j < 8; j++) {
-				DispPutPixel((ConCursorX * 8) + j, (ConCursorY * 16) + i, (*glyph & mask) ? ConForeColor : ConBackColor);
-				mask >>= 1;
-			}
-			
-			glyph++;
-		}
-		
-		ConCursorX++;
-		
-		break;
-	}
-	}
-	
-	if (ConCursorX >= DispGetWidth() / 8) {																							// Go to the next line?
-		ConCursorX = 0;																												// Yes
-		ConCursorY++;
-	}
-	
-	if (ConCursorY >= DispGetHeight() / 16) {																						// Scroll up?
-		DispScrollScreen(ConBackColor);																								// Yes
-		ConCursorY = (DispGetHeight() / 16) - 1;
-	}
+static Void ConWriteCharacterInt(WChar data, Boolean cursor) {
+	ImgWriteCharacter(DispBackBuffer, cursor, &ConCursorX, &ConCursorY, ConBackColor, ConForeColor, data);							// Redirect to ImgWriteCharacter
 }
 
 Void ConWriteCharacter(WChar data) {
 	PsLock(&ConLock);																												// Lock
 	
-	if (ConCursorEnabled) {																											// Erase the old cursor?
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);													// Yes
-	}
-	
-	ConWriteCharacterInt(data);																										// Write the character
-	
-	if (ConCursorEnabled) {																											// Draw the new cursor?
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);													// Yes
-	}
+	ConWriteCharacterInt(data, ConCursorEnabled);																					// Write the character
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -246,28 +184,18 @@ Void ConWriteCharacter(WChar data) {
 	PsUnlock(&ConLock);																												// Unlock
 }
 
-static Void ConWriteStringInt(PWChar data) {
-	if (data == Null) {
+static Void ConWriteStringInt(PWChar data, Boolean cursor) {
+	if (data == Null) {																												// Sanity check
 		return;
 	}
 	
-	for (UIntPtr i = 0; i < StrGetLength(data); i++) {																				// Write all the characters from the string
-		ConWriteCharacterInt(data[i]);
-	}
+	ImgWriteString(DispBackBuffer, cursor, &ConCursorX, &ConCursorY, ConBackColor, ConForeColor, data);								// Redirect to ImgWriteString
 }
 
 Void ConWriteString(PWChar data) {
 	PsLock(&ConLock);																												// Lock
 	
-	if (ConCursorEnabled) {																											// Erase the old cursor?
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);													// Yes
-	}
-	
-	ConWriteStringInt(data);																										// Write the string
-	
-	if (ConCursorEnabled) {																											// Draw the new cursor?
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);													// Yes
-	}
+	ConWriteStringInt(data, ConCursorEnabled);																						// Write the string
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -276,34 +204,14 @@ Void ConWriteString(PWChar data) {
 	PsUnlock(&ConLock);																												// Unlock
 }
 
-static Void ConWriteIntegerInt(UIntPtr data, UInt8 base) {
-	if (data == 0) {
-		ConWriteCharacterInt('0');
-		return;
-	}
-	
-	static WChar buf[32] = { 0 };
-	Int i = 30;
-	
-	for (; data && i; i--, data /= base) {
-		buf[i] = L"0123456789ABCDEF"[data % base];
-	}
-	
-	ConWriteStringInt(&buf[i + 1]);
+static Void ConWriteIntegerInt(UIntPtr data, UInt8 base, Boolean cursor) {
+	ImgWriteInteger(DispBackBuffer, cursor, &ConCursorX, &ConCursorY, ConBackColor, ConForeColor, data, base);						// Redirect to ImgWriteIntegerr
 }
 
 Void ConWriteInteger(UIntPtr data, UInt8 base) {
 	PsLock(&ConLock);																												// Lock
 	
-	if (ConCursorEnabled) {																											// Erase the old cursor?
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);													// Yes
-	}
-	
-	ConWriteIntegerInt(data, base);																									// Write the integer
-	
-	if (ConCursorEnabled) {																											// Draw the new cursor?
-		DispFillRectangle(ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);													// Yes
-	}
+	ConWriteIntegerInt(data, base, ConCursorEnabled);																				// Write the integer
 	
 	if (ConRefresh) {
 		DispRefresh();																												// Refresh the screen
@@ -331,23 +239,23 @@ Void ConWriteFormated(PWChar data, ...) {
 	
 	for (UIntPtr i = 0; i < StrGetLength(data); i++) {
 		if (data[i] != '%') {																										// It's an % (integer, string, character or other)?
-			ConWriteCharacterInt(data[i]);																							// No
+			ConWriteCharacterInt(data[i], False);																					// No
 		} else {
 			switch (data[++i]) {																									// Yes, let's parse it!
 			case 's': {																												// String
-				ConWriteStringInt((PWChar)VariadicArg(va, PWChar));
+				ConWriteStringInt((PWChar)VariadicArg(va, PWChar), False);
 				break;
 			}
 			case 'c': {																												// Character
-				ConWriteCharacterInt((Char)VariadicArg(va, Int));
+				ConWriteCharacterInt((Char)VariadicArg(va, Int), False);
 				break;
 			}
 			case 'd': {																												// Decimal Number
-				ConWriteIntegerInt((UIntPtr)VariadicArg(va, UIntPtr), 10);
+				ConWriteIntegerInt((UIntPtr)VariadicArg(va, UIntPtr), 10, False);
 				break;
 			}
 			case 'x': {																												// Hexadecimal Number
-				ConWriteIntegerInt((UIntPtr)VariadicArg(va, UIntPtr), 16);
+				ConWriteIntegerInt((UIntPtr)VariadicArg(va, UIntPtr), 16, False);
 				break;
 			}
 			case 'b': {																												// Change the background color
@@ -364,7 +272,7 @@ Void ConWriteFormated(PWChar data, ...) {
 				break;
 			}
 			default: {																												// Probably it's another % (probably)
-				ConWriteCharacterInt(data[i]);
+				ConWriteCharacterInt(data[i], False);
 				break;
 			}
 			}
