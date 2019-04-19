@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on April 19 of 2019, at 13:21 BRT
+// Last edited on April 19 of 2019, at 17:52 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -33,16 +33,29 @@ Void KernelMain(Void) {
 	DbgWriteFormated("[Kernel] Arch VMM initialized\r\n");
 	
 	ArchInitDisplay();																										// Init the display
+	
+	if ((ArchBootOptions & BOOT_OPTIONS_VERBOSE) == BOOT_OPTIONS_VERBOSE) {													// Verbose boot?
+		PImage con = ImgCreateBuf(DispGetWidth(), DispGetHeight() - 40, DispBackBuffer->bpp, DispBackBuffer->buf);			// Yes, try to create the console surface
+
+		if (con != Null) {																									// Failed?
+			ConSetSurface(con, True, True, 0, 0);																			// No, set the console surface
+			DbgSetRedirect(True);																							// Enable the redirect feature of the Dbg* functions
+			ConSetColor(0xFF0D3D56, 0xFFFFFFFF);																			// Set the background and foreground colors
+			ConSetCursorEnabled(False);																						// Disable the cursor
+			ConClearScreen();																								// Clear the screen
+		}
+	}
+	
 	DbgWriteFormated("[Kernel] Arch display initialized\r\n");
+	
+	DispDrawProgessBar();																									// Draw the progress bar
+	DbgWriteFormated("[Kernel] The boot progress bar has been shown\r\n");
 	
 	ArchInitMouse();																										// Init the mouse
 	DbgWriteFormated("[Kernel] Arch mouse initialized\r\n");
 	
 	ArchInitKeyboard();																										// Init the keyboard
 	DbgWriteFormated("[Kernel] Arch keyboard intialized\r\n");
-	
-	DispDrawProgessBar();																									// Draw the progress bar
-	DbgWriteFormated("[Kernel] The boot progress bar has been shown\r\n");
 	
 	ArchInitSc();																											// Init the system call interface
 	DbgWriteFormated("[Kernel] Arch system call interface initialized\r\n");
@@ -78,7 +91,8 @@ Void KernelMainLate(Void) {
 	DbgWriteFormated("[Kernel] Kernel initialized\r\n\r\n");
 	TimerSleep(500);																										// Wait 500ms, so the user can see our bootscreen (why not?)
 	
-	ConSetSurface(DispBackBuffer, 0, 0);																					// Init the console
+	DbgSetRedirect(False);																									// Disable the redirect feature of the Dbg* functions, as it may be enabled
+	ConSetSurface(DispBackBuffer, True, False, 0, 0);																		// Init the console
 	ConClearScreen();																										// Clear the screen
 	ConWriteFormated(NlsGetMessage(NLS_OS_NAME), CHICAGO_ARCH);																// Print some system informations
 	ConWriteFormated(NlsGetMessage(NLS_OS_CODENAME), CHICAGO_CODENAME);

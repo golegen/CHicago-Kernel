@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:24 BRT
-// Last edited on April 19 of 2019, at 13:18 BRT
+// Last edited on April 19 of 2019, at 16:52 BRT
 
 #ifndef __CHICAGO_CONSOLE_H__
 #define __CHICAGO_CONSOLE_H__
@@ -9,7 +9,7 @@
 #include <chicago/img.h>
 
 Void ConAcquireLock(Void);
-Void ConSetSurface(PImage img, UIntPtr x, UIntPtr y);
+Void ConSetSurface(PImage img, Boolean disp, Boolean free, UIntPtr x, UIntPtr y);
 Void ConSetRefresh(Boolean s);
 Boolean ConGetRefresh(Void);
 Void ConSetCursorEnabled(Boolean e);

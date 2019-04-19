@@ -1,8 +1,9 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on April 19 of 2019, at 13:16 BRT
+// Last edited on April 19 of 2019, at 17:13 BRT
 
+#include <chicago/alloc.h>
 #include <chicago/display.h>
 #include <chicago/process.h>
 #include <chicago/string.h>
@@ -14,6 +15,8 @@ UIntPtr ConSurfaceX = 0;
 UIntPtr ConSurfaceY = 0;
 PImage ConSurface = Null;
 Boolean ConRefresh = True;
+Boolean ConSurfaceDisp = False;
+Boolean ConSurfaceFree = False;
 Boolean ConCursorEnabled = True;
 UIntPtr ConBackColor = 0xFF000000;
 UIntPtr ConForeColor = 0xFFAAAAAA;
@@ -27,13 +30,23 @@ Void ConAcquireLock(Void) {
 	ConForeColor = 0xFFAAAAAA;
 }
 
-Void ConSetSurface(PImage img, UIntPtr x, UIntPtr y) {
+Void ConSetSurface(PImage img, Boolean disp, Boolean free, UIntPtr x, UIntPtr y) {
+	if (img == Null) {																												// Sanity check
+		return;
+	}
+	
 	PsLock(&ConLock);																												// Lock
+	
+	if (ConSurfaceFree) {																											// Free the old surface?
+		MemFree((UIntPtr)ConSurface);																								// Yes
+	}
 	
 	ConSurface = img;																												// Set the surface
 	ConSurfaceX = x;
 	ConSurfaceY = y;
 	ConRefresh = True;																												// And reset the console attributes
+	ConSurfaceDisp = disp;
+	ConSurfaceFree = free;
 	ConCursorEnabled = True;
 	ConBackColor = 0xFF000000;
 	ConForeColor = 0xFFAAAAAA;
@@ -172,7 +185,7 @@ UIntPtr ConGetCursorY(Void) {
 static Void ConRefreshScreen(Void) {
 	if (!ConRefresh) {																												// Check if we should refresh
 		return;
-	} else if (ConSurface != DispBackBuffer) {																						// Our surface is the backbuffer?
+	} else if (ConSurface != DispBackBuffer && !ConSurfaceDisp) {																	// Our surface is the backbuffer?
 		DispBitBlit(ConSurface, 0, 0, ConSurfaceX, ConSurfaceY, ConSurface->width, ConSurface->height, BITBLIT_MODE_COPY);			// Nope, copy it to the backbuffer
 	}
 	
@@ -198,7 +211,17 @@ static Void ConWriteCharacterInt(WChar data, Boolean cursor) {
 
 Void ConWriteCharacter(WChar data) {
 	PsLock(&ConLock);																												// Lock
-	ConWriteCharacterInt(data, ConCursorEnabled);																					// Write the character
+	
+	if (data != '\n' && ConCursorEnabled) {																							// Erase the old cursor?
+		ImgFillRectangle(ConSurface, ConCursorX * 8, ConCursorY * 16, 8, 16, ConBackColor);											// Yes
+	}
+	
+	ConWriteCharacterInt(data, ((data != '\n') && (data != '\r')) ? ConCursorEnabled : False);										// Write the character
+	
+	if (data == '\n' && ConCursorEnabled) {																							// Draw the new cursor?
+		ImgFillRectangle(ConSurface, ConCursorX * 8, ConCursorY * 16, 8, 16, ConForeColor);											// Yes
+	}
+	
 	ConRefreshScreen();																												// Refresh the screen
 	PsUnlock(&ConLock);																												// Unlock
 }

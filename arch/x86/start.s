@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:21 BRT
-// Last edited on March 03 of 2019, at 11:11 BRT
+// Last edited on April 19 of 2019, at 17:50 BRT
 
 .section .text
 
@@ -16,6 +16,7 @@ KernelEntry:
 	mov %ebx, (BootmgrBootDev - 0xC0000000)																				// Save the bootmgr data!
 	mov %ecx, (BootmgrMemMap - 0xC0000000)
 	mov %edx, (BootmgrMemMapCount - 0xC0000000)
+	mov %edi, (ArchBootOptions - 0xC0000000)
 	
 	mov (%esi), %eax
 	mov %eax, (BootmgrDispWidth - 0xC0000000)
@@ -529,6 +530,9 @@ BootmgrMemMap: .int 0
 
 .global BootmgrMemMapCount
 BootmgrMemMapCount: .int 0
+
+.global ArchBootOptions
+ArchBootOptions: .int 0
 
 .global BootmgrDispWidth
 BootmgrDispWidth: .int 0

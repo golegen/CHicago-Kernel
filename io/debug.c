@@ -1,9 +1,28 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 27 of 2018, at 14:19 BRT
-// Last edited on October 27 of 2018, at 15:28 BRT
+// Last edited on April 19 of 2019, at 16:47 BRT
 
+#include <chicago/console.h>
 #include <chicago/debug.h>
+
+Boolean DbgRedirect = False;
+
+Void DbgSetRedirect(Boolean red) {
+	DbgRedirect = red;
+}
+
+Boolean DbgGetRedirect(Void) {
+	return DbgRedirect;
+}
+
+Void DbgWriteCharacter(Char data) {
+	DbgWriteCharacterInt(data);												// Write the character
+	
+	if (DbgRedirect) {														// Redirect to the console (maybe)
+		ConWriteCharacter(data);
+	}
+}
 
 Void DbgWriteString(PChar data) {
 	for (UInt32 i = 0; data[i] != '\0'; i++) {

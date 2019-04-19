@@ -1,12 +1,12 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 23:50 BRT
-// Last edited on October 27 of 2018, at 15:28 BRT
+// Last edited on April 19 of 2019, at 16:44 BRT
 
 #include <chicago/arch/port.h>
 #include <chicago/arch/serial.h>
 
-Void DbgWriteCharacter(Char data) {
+Void DbgWriteCharacterInt(Char data) {
 	while ((PortInByte(COM1_PORT + 5) & 0x20) == 0) ;
 	PortOutByte(COM1_PORT, data);
 }
