@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 28 of 2018, at 01:09 BRT
-// Last edited on February 22 of 2019, at 22:29 BRT
+// Last edited on April 19 of 2019, at 22:00 BRT
 
 #define __CHICAGO_ARCH_PROCESS__
 
@@ -21,6 +21,8 @@
 
 Aligned(16) UInt8 PsFPUStateSave[512];
 Aligned(16) UInt8 PsFPUDefaultState[512];
+
+static Boolean PsRequeue = True;
 
 PContext PsCreateContext(UIntPtr entry, UIntPtr userstack, Boolean user) {
 	PContext ctx = (PContext)MemAllocate(sizeof(Context));															// Alloc some space for the context struct
@@ -77,7 +79,12 @@ Void PsSwitchTaskForce(PRegisters regs) {
 		old->ctx->esp = (UIntPtr)regs;																				// Save the old context
 		Asm Volatile("fxsave (%0)" :: "r"(PsFPUStateSave));															// And the old fpu state
 		StrCopyMemory(old->ctx->fpu_state, PsFPUStateSave, 512);
-		QueueAdd(PsThreadQueue, old);																				// And add the old process to the queue again
+		
+		if (PsRequeue) {																							// Add the old process to the queue again?
+			QueueAdd(PsThreadQueue, old);																			// Yes :)
+		} else {
+			PsRequeue = True;																						// No
+		}
 	}
 	
 	GDTSetKernelStack((UInt32)(PsCurrentThread->ctx->kstack));														// Switch the kernel stack in the tss
@@ -99,19 +106,6 @@ Void PsSwitchTaskForce(PRegisters regs) {
 }
 
 Void PsSwitchTaskTimer(PRegisters regs) {
-	if (PsSleepList != Null) {																						// Remember that this function is called each 1ms :)
-start:	ListForeach(PsSleepList, i) {
-			PThread th = (PThread)i->data;
-			
-			if (th->wtime == 0) {																					// Wakeup?
-				PsWakeup(PsSleepList, th);																			// Yes :)
-				goto start;																							// Go back to the start!
-			} else {
-				th->wtime--;																						// Nope, just decrese the wtime counter
-			}
-		}
-	}
-	
 	if ((PsThreadQueue == Null) || (PsThreadQueue->length == 0) || (!PsTaskSwitchEnabled)) {						// We can switch?
 		return;																										// Nope
 	} else if (PsCurrentThread->time != 0) {																		// This process still have time to run?
@@ -148,13 +142,26 @@ start:	ListForeach(PsSleepList, i) {
 }
 
 Void PsSwitchTask(PVoid priv) {
+	if (priv != Null && priv != PsDontRequeue && PsSleepList != Null) {												// Timer?
+start:	ListForeach(PsSleepList, i) {																				// Yes
+			PThread th = (PThread)i->data;
+			
+			if (th->wtime == 0) {																					// Wakeup?
+				PsWakeup(PsSleepList, th);																			// Yes :)
+				goto start;																							// Go back to the start!
+			} else {
+				th->wtime--;																						// Nope, just decrese the wtime counter
+			}
+		}
+	}
+	
 	if ((PsThreadQueue == Null) || (PsThreadQueue->length == 0) || (!PsTaskSwitchEnabled)) {						// We can switch?
 		return;																										// Nope
 	} else if (priv != Null && priv != PsDontRequeue) {																// Use timer?
 		PsSwitchTaskTimer((PRegisters)priv);																		// Yes!
 	} else {
 		if (priv == PsDontRequeue) {																				// Requeue?
-			PsCurrentThread = Null;																					// Nope
+			PsRequeue = False;																						// Nope
 		}
 		
 		Asm Volatile("sti; int $0x3E");																				// Let's use int 0x3E!

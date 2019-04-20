@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 12 of 2018, at 21:08 BRT
-// Last edited on December 14 of 2018, at 18:27 BRT
+// Last edited on April 19 of 2019, at 19:56 BRT
 
 #include <chicago/debug.h>
 #include <chicago/device.h>
@@ -35,7 +35,7 @@ Void RawKeyboardDeviceRead(UIntPtr len, PUInt8 buf) {
 		return;
 	}
 	
-	while (RawKeyboardDeviceQueue.length < len) {											// Let's fill the queue with the chars that we need
+	while (RawKeyboardDeviceQueue.length < len) {											// Let's fill the queue with the chars that we need 
 		PsSwitchTask(Null);
 	}
 	

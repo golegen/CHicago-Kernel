@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on April 19 of 2019, at 17:52 BRT
+// Last edited on April 19 of 2019, at 19:42 BRT
 
 #include <chicago/arch.h>
 #include <chicago/console.h>
@@ -79,7 +79,7 @@ Void KernelMain(Void) {
 Void KernelMainLate(Void) {
 	DispIncrementProgessBar();
 	DbgWriteFormated("[Kernel] Tasking initialized\r\n");																	// Tasking initialized
-	TimerSleep(500);																										// Wait 500ms, so the user can see our bootscreen (why not?)
+	PsSleep(500);																											// Wait 500ms, so the user can see our bootscreen (why not?)
 	
 	IpcInit();																												// Init the IPC interface
 	DispIncrementProgessBar();
@@ -89,7 +89,7 @@ Void KernelMainLate(Void) {
 	NetFinish();																											// And start handling the network packets
 	DispFillProgressBar();																									// Kernel initialized
 	DbgWriteFormated("[Kernel] Kernel initialized\r\n\r\n");
-	TimerSleep(500);																										// Wait 500ms, so the user can see our bootscreen (why not?)
+	PsSleep(500);																											// Wait 500ms, so the user can see our bootscreen (why not?)
 	
 	DbgSetRedirect(False);																									// Disable the redirect feature of the Dbg* functions, as it may be enabled
 	ConSetSurface(DispBackBuffer, True, False, 0, 0);																		// Init the console

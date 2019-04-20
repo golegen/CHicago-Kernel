@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on April 19 of 2019, at 17:13 BRT
+// Last edited on April 19 of 2019, at 20:00 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/display.h>
@@ -28,6 +28,12 @@ Void ConAcquireLock(Void) {
 	ConCursorEnabled = True;
 	ConBackColor = 0xFF000000;
 	ConForeColor = 0xFFAAAAAA;
+	
+	if (ConSurfaceFree) {																											// Free the old surface?
+		MemFree((UIntPtr)ConSurface);																								// Yes
+	}
+	
+	ConSurface = DispBackBuffer;																									// Set the default surface
 }
 
 Void ConSetSurface(PImage img, Boolean disp, Boolean free, UIntPtr x, UIntPtr y) {
