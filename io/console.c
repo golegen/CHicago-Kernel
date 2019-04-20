@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:20 BRT
-// Last edited on April 19 of 2019, at 20:00 BRT
+// Last edited on April 20 of 2019, at 10:27 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/display.h>
@@ -188,8 +188,8 @@ UIntPtr ConGetCursorY(Void) {
 	return y;																														// Return it
 }
 
-static Void ConRefreshScreen(Void) {
-	if (!ConRefresh) {																												// Check if we should refresh
+Void ConRefreshScreen(Void) {
+	if ((ConSurface == Null) || !ConRefresh) {																						// Check if we should refresh
 		return;
 	} else if (ConSurface != DispBackBuffer && !ConSurfaceDisp) {																	// Our surface is the backbuffer?
 		DispBitBlit(ConSurface, 0, 0, ConSurfaceX, ConSurfaceY, ConSurface->width, ConSurface->height, BITBLIT_MODE_COPY);			// Nope, copy it to the backbuffer

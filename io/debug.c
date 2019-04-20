@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 27 of 2018, at 14:19 BRT
-// Last edited on April 19 of 2019, at 16:47 BRT
+// Last edited on April 20 of 2019, at 10:29 BRT
 
 #include <chicago/console.h>
 #include <chicago/debug.h>
@@ -25,8 +25,21 @@ Void DbgWriteCharacter(Char data) {
 }
 
 Void DbgWriteString(PChar data) {
+	Boolean refresh = ConGetRefresh();
+	
+	if (DbgRedirect && refresh) {											// Redirect to the console?
+		ConSetRefresh(False);												// Yes, disable the refresh
+		ConSetCursorEnabled(False);											// And the cursor
+	}
+	
 	for (UInt32 i = 0; data[i] != '\0'; i++) {
 		DbgWriteCharacter(data[i]);
+	}
+	
+	if (DbgRedirect && refresh) {
+		ConSetRefresh(True);												// Enable the refresh
+		ConSetCursorEnabled(True);											// Enable the cursor
+		ConRefreshScreen();													// And refresh
 	}
 }
 
@@ -49,6 +62,13 @@ Void DbgWriteInteger(UIntPtr data, UInt8 base) {
 Void DbgWriteFormated(PChar data, ...) {
 	VariadicList va;
 	VariadicStart(va, data);												// Let's start our va list with the arguments provided by the user (if any)
+	
+	Boolean refresh = ConGetRefresh();
+	
+	if (DbgRedirect && refresh) {											// Redirect to the console?
+		ConSetRefresh(False);												// Yes, disable the refresh
+		ConSetCursorEnabled(False);											// And the cursor
+	}
 	
 	for (UInt32 i = 0; data[i] != '\0'; i++) {
 		if (data[i] != '%') {												// It's an % (integer, string, character or other)?
@@ -77,6 +97,12 @@ Void DbgWriteFormated(PChar data, ...) {
 			}
 			}
 		}
+	}
+	
+	if (DbgRedirect && refresh) {
+		ConSetRefresh(True);												// Enable the refresh
+		ConSetCursorEnabled(True);											// Enable the cursor
+		ConRefreshScreen();													// And refresh
 	}
 	
 	VariadicEnd(va);

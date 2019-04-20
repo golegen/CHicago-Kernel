@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 20 of 2018, at 15:24 BRT
-// Last edited on April 19 of 2019, at 16:52 BRT
+// Last edited on April 20 of 2019, at 10:27 BRT
 
 #ifndef __CHICAGO_CONSOLE_H__
 #define __CHICAGO_CONSOLE_H__
@@ -25,6 +25,7 @@ Void ConSetCursorY(UIntPtr pos);
 Void ConGetCursor(PUIntPtr x, PUIntPtr y);
 UIntPtr ConGetCursorX(Void);
 UIntPtr ConGetCursorY(Void);
+Void ConRefreshScreen(Void);
 Void ConClearScreen(Void);
 Void ConWriteCharacter(WChar data);
 Void ConWriteString(PWChar data);
