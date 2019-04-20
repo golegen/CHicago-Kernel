@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on October 27 of 2018, at 14:19 BRT
-// Last edited on April 20 of 2019, at 10:29 BRT
+// Last edited on April 20 of 2019, at 11:36 BRT
 
 #include <chicago/console.h>
 #include <chicago/debug.h>
@@ -29,7 +29,6 @@ Void DbgWriteString(PChar data) {
 	
 	if (DbgRedirect && refresh) {											// Redirect to the console?
 		ConSetRefresh(False);												// Yes, disable the refresh
-		ConSetCursorEnabled(False);											// And the cursor
 	}
 	
 	for (UInt32 i = 0; data[i] != '\0'; i++) {
@@ -38,7 +37,6 @@ Void DbgWriteString(PChar data) {
 	
 	if (DbgRedirect && refresh) {
 		ConSetRefresh(True);												// Enable the refresh
-		ConSetCursorEnabled(True);											// Enable the cursor
 		ConRefreshScreen();													// And refresh
 	}
 }
@@ -67,7 +65,6 @@ Void DbgWriteFormated(PChar data, ...) {
 	
 	if (DbgRedirect && refresh) {											// Redirect to the console?
 		ConSetRefresh(False);												// Yes, disable the refresh
-		ConSetCursorEnabled(False);											// And the cursor
 	}
 	
 	for (UInt32 i = 0; data[i] != '\0'; i++) {
@@ -101,7 +98,6 @@ Void DbgWriteFormated(PChar data, ...) {
 	
 	if (DbgRedirect && refresh) {
 		ConSetRefresh(True);												// Enable the refresh
-		ConSetCursorEnabled(True);											// Enable the cursor
 		ConRefreshScreen();													// And refresh
 	}
 	

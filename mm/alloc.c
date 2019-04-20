@@ -1,8 +1,9 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 13 of 2018, at 00:44 BRT
-// Last edited on January 23 of 2019, at 11:18 BRT
+// Last edited on April 20 of 2019, at 18:09 BRT
 
+#include <chicago/alloc.h>
 #include <chicago/alloc-int.h>
 #include <chicago/heap.h>
 #include <chicago/mm.h>
@@ -124,7 +125,7 @@ UIntPtr MemAllocate(UIntPtr size) {
 }
 
 UIntPtr MemAAllocate(UIntPtr size, UIntPtr align) {
-	if (size == 0) {
+	if (size == 0) {																											// Some checks...
 		return 0;
 	} else if (align == 0) {
 		return 0;
@@ -132,16 +133,21 @@ UIntPtr MemAAllocate(UIntPtr size, UIntPtr align) {
 		return 0;
 	}
 	
-	UIntPtr p1 = 0;
-	PUIntPtr p2 = Null;
-	IntPtr off = align - 1 + sizeof(UIntPtr);
-	UIntPtr possiblenew = HeapGetCurrent() + size + off + sizeof(AllocBlock);
+	UIntPtr p0 = MemAllocate(size + align);																						// Alloc the memory
 	
-	if ((p1 = MemAllocate(size + off + (possiblenew % MM_PAGE_SIZE))) == 0) {
-		return 0;
+	if (p0 == 0) {
+		return 0;																												// Failed/Out of memory :(
 	}
 	
-	p2 = (PUIntPtr)((p1 + off) & ~(align - 1));
+	MemFree(p0);																												// Free the allocated memory
+	
+	UIntPtr p1 = MemAllocate(size + align + ((p0 + (align - (p0 % align))) - p0));												// Now, let's alloc the real amount of bytes that we're going to use
+	
+	if (p1 == 0) {
+		return 0;																												// Failed
+	}
+	
+	PUIntPtr p2 = (PUIntPtr)(p1 + (align - (p1 % align)));
 	p2[-1] = p1;
 	
 	return (UIntPtr)p2;
