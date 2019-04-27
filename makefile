@@ -1,7 +1,7 @@
 # File author is Ítalo Lima Marconato Matias
 #
 # Created on May 11 of 2018, at 13:14 BRT
-# Last edited on April 19 of 2019, at 17:39 BRT
+# Last edited on April 23 of 2019, at 18:21 BRT
 
 ARCH ?= x86
 VERBOSE ?= false
@@ -42,8 +42,8 @@ OBJECTS += mm/alloc.c.o mm/heap.c.o mm/pmm.c.o mm/ualloc.c.o
 OBJECTS += mm/virt.c.o
 OBJECTS += net/net.c.o
 OBJECTS += nls/br.c.o nls/en.c.o nls/nls.c.o
-OBJECTS += sys/ipc.c.o sys/panic.c.o sys/process.c.o sys/rand.c.o
-OBJECTS += sys/sc.c.o sys/shell.c.o sys/string.c.o
+OBJECTS += sys/config.c.o sys/ipc.c.o sys/panic.c.o sys/process.c.o
+OBJECTS += sys/rand.c.o sys/sc.c.o sys/shell.c.o sys/string.c.o
 OBJECTS += vid/display.c.o vid/img.c.o
 
 OTHER_OBJECTS := font.psf splash.bmp
