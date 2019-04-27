@@ -1,9 +1,11 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on May 11 of 2018, at 13:14 BRT
-// Last edited on April 26 of 2019, at 22:08 BRT
+// Last edited on April 27 of 2019, at 11:04 BRT
 
+#include <chicago/alloc.h>
 #include <chicago/arch.h>
+#include <chicago/config.h>
 #include <chicago/console.h>
 #include <chicago/debug.h>
 #include <chicago/display.h>
@@ -14,6 +16,7 @@
 #include <chicago/nls.h>
 #include <chicago/panic.h>
 #include <chicago/shell.h>
+#include <chicago/string.h>
 #include <chicago/timer.h>
 #include <chicago/version.h>
 
@@ -87,6 +90,47 @@ Void KernelMainLate(Void) {
 	
 	ArchFinishKeyboard();																									// Now we can start handling the keyboard!
 	NetFinish();																											// And start handling the network packets
+	
+	PList conf = ConfLoad(L"System.conf");																					// Load the configuration file, let's set the system language!
+	
+	if (conf != Null) {																										// Failed?
+		PConfField lang = ConfGetField(conf, L"Language");																	// No! Let's get the system language
+		
+		if (lang != Null) {
+			NlsSetLanguage(NlsGetLanguage(lang->value));
+		}
+		
+		ConfFree(conf);																										// Now free the loaded conf file
+	}
+	
+	conf = ConfLoad(L"Drivers.conf");																						// Now, let's load the driver configuration file (contain all the driver that we need to load)
+	
+	if (conf != Null) {																										// Failed?
+		ListForeach(conf, i) {																								// No! Let's load all the drivers!
+			PConfField drv = (PConfField)i->data;
+			PChar name = (PChar)MemAllocate(StrGetLength(drv->name) + 1);													// Alloc space for converting the name to ASCII (for the Dbg* functions)
+			
+			if (name == Null) {
+				continue;
+			}
+			
+			PChar path = (PChar)MemAllocate(StrGetLength(drv->value) + 1);													// Alloc space for converting the path to ASCII (for the Dbg* functions)
+			
+			if (path == Null) {
+				MemFree((UIntPtr)name);
+				continue;
+			}
+			
+			StrCFromUnicode(name, drv->name, StrGetLength(drv->name));														// Convert the name
+			StrCFromUnicode(path, drv->value, StrGetLength(drv->value));													// And the path!
+			DbgWriteFormated("[Kernel] Loaded driver '%s' (%s)\r\n", name, path);											// Print some info about the driver (name and path)
+			MemFree((UIntPtr)name);																							// Free the name
+			MemFree((UIntPtr)path);																							// Free the path
+		}
+		
+		ConfFree(conf);																										// Now free the loaded conf file
+	}
+	
 	DispFillProgressBar();																									// Kernel initialized
 	DbgWriteFormated("[Kernel] Kernel initialized\r\n\r\n");
 	PsSleep(500);																											// Wait 500ms, so the user can see our bootscreen (why not?)

@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on July 15 of 2018, at 19:05 BRT
-// Last edited on January 23 of 2019, at 23:05 BRT
+// Last edited on April 277 of 2019, at 10:59 BRT
 
 #include <chicago/alloc.h>
 
@@ -410,6 +410,18 @@ Void StrUnicodeFromC(PWChar dest, PChar src, UIntPtr len) {
 	
 	for (UIntPtr i = 0; i < len; i++) {												// Just copy :)
 		dest[i] = src[i];
+	}
+	
+	dest[len] = 0;
+}
+
+Void StrCFromUnicode(PChar dest, PWChar src, UIntPtr len) {
+	if ((dest == Null) || (src == Null) || (len == 0)) {							// Sanity checks
+		return;
+	}
+	
+	for (UIntPtr i = 0; i < len; i++) {												// Just copy :)
+		dest[i] = (Char)src[i];
 	}
 	
 	dest[len] = 0;

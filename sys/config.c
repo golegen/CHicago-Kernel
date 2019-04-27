@@ -1,7 +1,7 @@
 // File author is Ítalo Lima Marconato Matias
 //
 // Created on April 23 of 2019, at 18:08 BRT
-// Last edited on April 26 of 2019, at 22:02 BRT
+// Last edited on April 26 of 2019, at 22:35 BRT
 
 #include <chicago/alloc.h>
 #include <chicago/config.h>
@@ -200,15 +200,13 @@ static Boolean ConfParseTokens(PList conf, PList toks) {
 			pos++;
 		}
 		
-		if (!ConfExpectToken(toks, pos, L"=", False, False)) {																							// We expect to find an identifier here
+		if (pos >= toks->length) {																														// End?
+			return True;																																// Yes :)
+		} else if (!ConfExpectToken(toks, pos, L"=", False, False)) {																					// We expect to find an identifier here
 			return False;
-		}
-		
-		if (!ConfExpectToken(toks, pos, L",", False, False)) {
+		} else if (!ConfExpectToken(toks, pos, L",", False, False)) {
 			return False;
-		}
-		
-		if (!ConfExpectToken(toks, pos, L"\n", False, False)) {
+		} else if (!ConfExpectToken(toks, pos, L"\n", False, False)) {
 			return False;
 		}
 		
@@ -230,15 +228,11 @@ static Boolean ConfParseTokens(PList conf, PList toks) {
 				MemFree((UIntPtr)field->name);
 				MemFree((UIntPtr)field);
 				return False;
-			}
-			
-			if (!ConfExpectToken(toks, pos, L",", True, False)) {
+			} else if (!ConfExpectToken(toks, pos, L",", True, False)) {
 				MemFree((UIntPtr)field->name);
 				MemFree((UIntPtr)field);
 				return False;
-			}
-			
-			if (!ConfExpectToken(toks, pos, L"\n", True, False)) {
+			} else if (!ConfExpectToken(toks, pos, L"\n", True, False)) {
 				MemFree((UIntPtr)field->name);
 				MemFree((UIntPtr)field);
 				return False;
@@ -261,9 +255,7 @@ static Boolean ConfParseTokens(PList conf, PList toks) {
 			if (field->attrs == Null) {
 				ConfFreeField(field);																													// Failed...
 				return False;
-			}
-			
-			if (!ConfExpectToken(toks, pos++, L",", False, True)) {																						// Now we should have an comma here
+			} else if (!ConfExpectToken(toks, pos++, L",", False, True)) {																				// Now we should have an comma here
 				ConfFreeField(field);
 				return False;
 			}
@@ -301,16 +293,12 @@ start:		;PConfFieldAttribute attr = (PConfFieldAttribute)MemAllocate(sizeof(Conf
 					MemFree((UIntPtr)attr);
 					ConfFreeField(field);
 					return False;
-				}
-
-				if (!ConfExpectToken(toks, pos, L",", True, False)) {
+				} else if (!ConfExpectToken(toks, pos, L",", True, False)) {
 					MemFree((UIntPtr)attr->name);
 					MemFree((UIntPtr)attr);
 					ConfFreeField(field);
 					return False;
-				}
-
-				if (!ConfExpectToken(toks, pos, L"\n", True, False)) {
+				} else if (!ConfExpectToken(toks, pos, L"\n", True, False)) {
 					MemFree((UIntPtr)attr->name);
 					MemFree((UIntPtr)attr);
 					ConfFreeField(field);
